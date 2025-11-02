@@ -1,0 +1,93 @@
+# Core Dependencies
+sentence-transformers>=2.2.2
+chromadb>=0.4.22
+faiss-cpu>=1.7.4
+langchain>=0.1.0
+langchain-community>=0.0.10
+
+# Alternative Vector Stores
+qdrant-client>=1.7.0
+pinecone-client>=3.0.0
+
+# Text Processing
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+markdown>=3.5.0
+PyYAML>=6.0.1
+
+# Code Parsing
+tree-sitter>=0.20.4
+tree-sitter-python>=0.20.4
+ast-comments>=1.1.2
+
+# NLP & Embeddings
+transformers>=4.36.0
+torch>=2.1.0
+tokenizers>=0.15.0
+
+# Search & Ranking
+rank-bm25>=0.2.2
+elasticsearch>=8.11.0
+
+# Web Framework (API)
+fastapi>=0.109.0
+uvicorn[standard]>=0.25.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Async & Performance
+aiofiles>=23.2.1
+asyncio>=3.4.3
+nest-asyncio>=1.5.8
+
+# Database & Caching
+redis>=5.0.0
+aioredis>=2.0.1
+
+# Utilities
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+httpx>=0.26.0
+requests>=2.31.0
+
+# Monitoring & Logging
+prometheus-client>=0.19.0
+python-json-logger>=2.0.7
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+
+# Code Quality
+black>=23.12.0
+ruff>=0.1.9
+mypy>=1.8.0
+
+# Development
+ipython>=8.19.0
+jupyter>=1.0.0
+notebook>=7.0.0
+
+# File Handling
+watchdog>=3.0.0
+gitpython>=3.1.40
+
+# Text Splitting
+tiktoken>=0.5.2
+spacy>=3.7.0
+
+# Optional: GPU Support (uncomment if needed)
+# faiss-gpu>=1.7.4
+# torch>=2.1.0+cu118
+
+# Optional: Advanced NLP
+# openai>=1.6.0
+# anthropic>=0.8.0
+# cohere>=4.37
+
+# Optional: Document Processing
+# pypdf>=3.17.0
+# python-docx>=1.1.0
+# openpyxl>=3.1.2

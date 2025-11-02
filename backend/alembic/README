@@ -1,0 +1,40 @@
+Generic single-database configuration with async support for SQLAlchemy 2.0.
+
+## Usage
+
+### Create a new migration
+
+```bash
+alembic revision --autogenerate -m "description of changes"
+```
+
+### Apply migrations
+
+```bash
+# Upgrade to latest
+alembic upgrade head
+
+# Upgrade one version
+alembic upgrade +1
+
+# Downgrade one version
+alembic downgrade -1
+```
+
+### View migration history
+
+```bash
+alembic history
+alembic current
+```
+
+### Rollback
+
+```bash
+# Rollback to specific revision
+alembic downgrade <revision_id>
+
+# Rollback all
+alembic downgrade base
+```
+

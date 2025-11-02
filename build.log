@@ -1,0 +1,141 @@
+time="2025-10-30T13:43:45+05:30" level=warning msg="/Users/sahil-mac/ai/media-generation/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+Compose can now delegate builds to bake for better performance.
+ To do so, set COMPOSE_BAKE=true.
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [api internal] load build definition from Dockerfile
+#1 transferring dockerfile: 771B done
+#1 DONE 0.0s
+
+#2 [flower internal] load build definition from Dockerfile
+#2 transferring dockerfile: 771B done
+#2 DONE 0.0s
+
+#3 [worker internal] load build definition from Dockerfile
+#3 transferring dockerfile: 771B done
+#3 DONE 0.0s
+
+#4 [worker internal] load metadata for docker.io/library/python:3.12-slim
+#4 DONE 151.4s
+
+#5 [worker internal] load .dockerignore
+#5 transferring context: 1.05kB done
+#5 DONE 0.0s
+
+#6 [api internal] load .dockerignore
+#6 transferring context: 1.05kB done
+#6 DONE 0.0s
+
+#7 [flower internal] load .dockerignore
+#7 transferring context: 1.05kB done
+#7 DONE 0.0s
+
+#8 [flower internal] load build context
+#8 transferring context: 401.93kB 0.0s done
+#8 DONE 0.1s
+
+#9 [api 1/8] FROM docker.io/library/python:3.12-slim@sha256:e97cf9a2e84d604941d9902f00616db7466ff302af4b1c3c67fb7c522efa8ed9
+#9 resolve docker.io/library/python:3.12-slim@sha256:e97cf9a2e84d604941d9902f00616db7466ff302af4b1c3c67fb7c522efa8ed9 0.0s done
+#9 ...
+
+#10 [api internal] load build context
+#10 transferring context: 401.93kB 0.0s done
+#10 DONE 0.1s
+
+#11 [worker internal] load build context
+#11 transferring context: 401.93kB 0.0s done
+#11 DONE 0.1s
+
+#9 [worker 1/8] FROM docker.io/library/python:3.12-slim@sha256:e97cf9a2e84d604941d9902f00616db7466ff302af4b1c3c67fb7c522efa8ed9
+#9 sha256:06d872a0d2319c41be6ddbd198390010480dead0d1fa8ed85ea56ba143fa07ae 0B / 250B 0.2s
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 0B / 12.04MB 0.2s
+#9 sha256:0431e520412dfe08e5e304045d78f080f152e2abb0168fc967b63deeef2badfa 0B / 1.27MB 0.2s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 0B / 30.14MB 0.2s
+#9 sha256:06d872a0d2319c41be6ddbd198390010480dead0d1fa8ed85ea56ba143fa07ae 250B / 250B 0.9s done
+#9 sha256:06d872a0d2319c41be6ddbd198390010480dead0d1fa8ed85ea56ba143fa07ae 250B / 250B 0.9s done
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 3.15MB / 12.04MB 1.5s
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 4.19MB / 12.04MB 1.7s
+#9 sha256:0431e520412dfe08e5e304045d78f080f152e2abb0168fc967b63deeef2badfa 1.27MB / 1.27MB 2.2s done
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 2.10MB / 30.14MB 2.1s
+#9 sha256:0431e520412dfe08e5e304045d78f080f152e2abb0168fc967b63deeef2badfa 1.27MB / 1.27MB 2.2s done
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 5.24MB / 12.04MB 2.6s
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 6.29MB / 12.04MB 2.7s
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 7.34MB / 12.04MB 3.0s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 4.19MB / 30.14MB 2.9s
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 8.39MB / 12.04MB 3.5s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 6.29MB / 30.14MB 3.5s
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 9.44MB / 12.04MB 3.8s
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 10.49MB / 12.04MB 4.2s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 8.39MB / 30.14MB 4.2s
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 11.53MB / 12.04MB 4.5s
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 12.04MB / 12.04MB 4.6s done
+#9 sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 12.04MB / 12.04MB 4.6s done
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 10.49MB / 30.14MB 4.7s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 12.58MB / 30.14MB 5.1s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 14.68MB / 30.14MB 5.4s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 16.78MB / 30.14MB 5.7s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 18.87MB / 30.14MB 6.2s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 20.97MB / 30.14MB 6.5s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 23.07MB / 30.14MB 6.9s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 25.17MB / 30.14MB 7.4s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 27.26MB / 30.14MB 7.7s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 29.36MB / 30.14MB 8.0s
+#9 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 30.14MB / 30.14MB 8.0s done
+#9 extracting sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47
+#9 extracting sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 0.6s done
+#9 extracting sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 0.6s done
+#9 extracting sha256:0431e520412dfe08e5e304045d78f080f152e2abb0168fc967b63deeef2badfa 0.1s done
+#9 extracting sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2
+#9 extracting sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 0.2s done
+#9 extracting sha256:e9bca8fab0a20939598e3e44ca7587d6260ff1c0549360175320bce2a92afdf2 0.2s done
+#9 extracting sha256:06d872a0d2319c41be6ddbd198390010480dead0d1fa8ed85ea56ba143fa07ae done
+#9 DONE 9.0s
+
+#12 [api 2/8] WORKDIR /app
+#12 DONE 0.2s
+
+#13 [api 3/8] RUN apt-get update && apt-get install -y     gcc     g++     libpq-dev     curl     && rm -rf /var/lib/apt/lists/*
+#13 60.23 Ign:1 http://deb.debian.org/debian trixie InRelease
+#13 121.3 Ign:2 http://deb.debian.org/debian trixie-updates InRelease
+#13 182.4 Ign:3 http://deb.debian.org/debian-security trixie-security InRelease
+#13 243.5 Ign:1 http://deb.debian.org/debian trixie InRelease
+#13 305.5 Ign:2 http://deb.debian.org/debian trixie-updates InRelease
+#13 367.6 Ign:3 http://deb.debian.org/debian-security trixie-security InRelease
+#13 429.7 Ign:1 http://deb.debian.org/debian trixie InRelease
+#13 493.8 Ign:2 http://deb.debian.org/debian trixie-updates InRelease
+#13 749.5 Ign:3 http://deb.debian.org/debian-security trixie-security InRelease
+#13 813.6 Err:1 http://deb.debian.org/debian trixie InRelease
+#13 813.6   Connection failed [IP: 167.82.58.132 80]
+#13 813.6   Connection failed [IP: 2a04:4e42:fe7::644 80]
+#13 873.7 Err:2 http://deb.debian.org/debian trixie-updates InRelease
+#13 873.7   Connection failed [IP: 2a04:4e42:fe7::644 80]
+#13 873.7   Connection failed [IP: 167.82.58.132 80]
+#13 933.8 Err:3 http://deb.debian.org/debian-security trixie-security InRelease
+#13 933.8   Connection failed [IP: 167.82.58.132 80]
+#13 933.8   Connection failed [IP: 2a04:4e42:fe7::644 80]
+#13 933.8 Reading package lists...
+#13 933.8 W: Failed to fetch http://deb.debian.org/debian/dists/trixie/InRelease  Connection failed [IP: 2a04:4e42:fe7::644 80]
+#13 933.8 W: Failed to fetch http://deb.debian.org/debian/dists/trixie-updates/InRelease  Connection failed [IP: 167.82.58.132 80]
+#13 933.8 W: Failed to fetch http://deb.debian.org/debian-security/dists/trixie-security/InRelease  Connection failed [IP: 2a04:4e42:fe7::644 80]
+#13 933.8 W: Some index files failed to download. They have been ignored, or old ones used instead.
+#13 933.8 Reading package lists...
+#13 933.8 Building dependency tree...
+#13 933.8 Reading state information...
+#13 933.8 E: Unable to locate package gcc
+#13 933.8 E: Unable to locate package libpq-dev
+#13 933.8 E: Unable to locate package curl
+#13 ERROR: process "/bin/sh -c apt-get update && apt-get install -y     gcc     g++     libpq-dev     curl     && rm -rf /var/lib/apt/lists/*" did not complete successfully: exit code: 100
+------
+ > [worker 3/8] RUN apt-get update && apt-get install -y     gcc     g++     libpq-dev     curl     && rm -rf /var/lib/apt/lists/*:
+933.8 W: Failed to fetch http://deb.debian.org/debian/dists/trixie/InRelease  Connection failed [IP: 2a04:4e42:fe7::644 80]
+933.8 W: Failed to fetch http://deb.debian.org/debian/dists/trixie-updates/InRelease  Connection failed [IP: 167.82.58.132 80]
+933.8 W: Failed to fetch http://deb.debian.org/debian-security/dists/trixie-security/InRelease  Connection failed [IP: 2a04:4e42:fe7::644 80]
+933.8 W: Some index files failed to download. They have been ignored, or old ones used instead.
+933.8 Reading package lists...
+933.8 Building dependency tree...
+933.8 Reading state information...
+933.8 E: Unable to locate package gcc
+933.8 E: Unable to locate package libpq-dev
+933.8 E: Unable to locate package curl
+------
+failed to solve: process "/bin/sh -c apt-get update && apt-get install -y     gcc     g++     libpq-dev     curl     && rm -rf /var/lib/apt/lists/*" did not complete successfully: exit code: 100

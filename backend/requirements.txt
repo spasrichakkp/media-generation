@@ -1,0 +1,55 @@
+# Web Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+
+# Database
+sqlalchemy[asyncio]==2.0.35
+asyncpg==0.30.0
+alembic==1.13.3
+
+# Validation & Settings
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# Task Queue
+celery[redis]==5.4.0
+redis[hiredis]==5.0.8
+
+# Storage
+boto3==1.35.36
+aioboto3==13.2.0  # Async AWS SDK
+
+# Caching (redis 5.0.8 includes async support via redis.asyncio)
+# aioredis is deprecated, use redis.asyncio instead
+
+# HTTP Client
+httpx==0.27.2
+aiofiles==24.1.0
+
+# Utilities
+python-multipart==0.0.12
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.1
+
+# Monitoring
+prometheus-client==0.20.0
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-instrumentation-fastapi==0.48b0
+opentelemetry-instrumentation-celery==0.48b0
+opentelemetry-instrumentation-sqlalchemy==0.48b0
+opentelemetry-exporter-otlp==1.27.0
+
+# Video Generation (MoneyPrinterTurbo-inspired)
+moviepy==2.1.2  # Video editing and composition
+edge-tts==6.1.19  # Text-to-speech for voiceover
+Pillow>=9.2.0,<11.0  # Image processing (compatible with moviepy)
+loguru==0.7.3  # Enhanced logging
+
+# AI/ML
+openai==1.56.1  # OpenAI API client (optional LLM provider)
+aiohttp==3.11.11  # HTTP client for Ollama API
+
+# Development Dependencies (install with: pip install -r requirements-dev.txt)
+

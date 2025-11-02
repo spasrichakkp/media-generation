@@ -1,0 +1,135 @@
+[project]
+name = "media-generation-rag"
+version = "0.1.0"
+description = "RAG System for Media Generation Platform - Code Search & Context Retrieval"
+authors = [
+    {name = "Media Generation Team", email = "team@example.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+dependencies = [
+    # Core RAG
+    "sentence-transformers>=2.2.2",
+    "chromadb>=0.4.22",
+    "langchain>=0.1.0",
+    "langchain-community>=0.0.10",
+
+    # Text Processing
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+    "markdown>=3.5.0",
+    "pyyaml>=6.0.1",
+
+    # Code Parsing
+    "tree-sitter>=0.20.4",
+
+    # NLP & Embeddings
+    "transformers>=4.36.0",
+    "torch>=2.1.0",
+    "tokenizers>=0.15.0",
+
+    # Search & Ranking
+    "rank-bm25>=0.2.2",
+
+    # Web Framework
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.25.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+
+    # Async & Performance
+    "aiofiles>=23.2.1",
+
+    # Caching
+    "redis>=5.0.0",
+
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.66.0",
+    "httpx>=0.26.0",
+
+    # Monitoring
+    "prometheus-client>=0.19.0",
+
+    # Token counting
+    "tiktoken>=0.5.2",
+
+    # File watching
+    "watchdog>=3.0.0",
+    "gitpython>=3.1.40",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "black>=23.12.0",
+    "ruff>=0.1.9",
+    "mypy>=1.8.0",
+    "ipython>=8.19.0",
+]
+
+gpu = [
+    "faiss-gpu>=1.7.4",
+]
+
+full = [
+    "faiss-cpu>=1.7.4",
+    "qdrant-client>=1.7.0",
+    "elasticsearch>=8.11.0",
+    "spacy>=3.7.0",
+]
+
+[project.scripts]
+rag-index = "indexer.index_all:main"
+rag-search = "cli.search:main"
+rag-serve = "api.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["indexer", "embeddings", "vector_store", "retriever", "api", "utils", "cli"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+ignore = [
+    "E501",  # line too long
+    "B008",  # do not perform function calls in argument defaults
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
