@@ -16,9 +16,13 @@ from moviepy import (
     ColorClip,
     CompositeVideoClip,
     TextClip,
+    ImageClip,                # <— add this
     concatenate_videoclips,
 )
 from openai import AsyncOpenAI
+import textwrap                               # <— add this
+import numpy as np                             # <— add this
+from PIL import Image, ImageDraw, ImageFont  # <— add this
 
 from ...config import Settings
 from ...domain.services import VideoGeneratorService
@@ -421,7 +425,7 @@ Keep narration concise and impactful. Each scene should be 5-10 seconds."""
                 fps=fps,
                 codec=self.settings.video_codec,
                 audio_codec=self.settings.audio_codec,
-                bitrate=self.settings.video_bitrate,
+                bitrate=self.settings.video_bitrate or "1500k",  # e.g., 1.5 Mbps
                 logger=None,  # Suppress moviepy's verbose logging
             )
 
@@ -534,27 +538,35 @@ Keep narration concise and impactful. Each scene should be 5-10 seconds."""
                 duration=duration_per_scene,
             )
 
-            # Create text overlay with scene description
+            # Create colored background
+            background = ColorClip(size=(width, height), color=color, duration=duration_per_scene)
+
             try:
+                # Try MoviePy's TextClip first (will work if ImageMagick & font are OK)
                 text_clip = TextClip(
                     font="Arial-Bold",
                     text=scene["description"],
                     font_size=60,
                     color="white",
-                    size=(width - 100, None),  # Leave margin
+                    size=(width - 100, None),
                     method="caption",
                     duration=duration_per_scene,
-                )
-
-                # Position text in center
-                text_clip = text_clip.with_position("center")
-
-                # Composite text over background
+                ).with_position("center")
                 clip = CompositeVideoClip([background, text_clip])
-
             except Exception as e:
-                logger.warning(f"Failed to create text overlay: {e}, using plain background")
-                clip = background
+                logger.warning(f"TextClip failed ({e}); using Pillow fallback")
+                try:
+                    text_img_clip = self._pillow_text_clip(
+                        text=scene["description"],
+                        width=width,
+                        height=height,
+                        duration=duration_per_scene,
+                        fps=fps,
+                    )
+                    clip = CompositeVideoClip([background, text_img_clip])
+                except Exception as e2:
+                    logger.error(f"Pillow fallback failed ({e2}); using plain background")
+                    clip = background
 
             clips.append(clip)
 
@@ -607,6 +619,55 @@ Keep narration concise and impactful. Each scene should be 5-10 seconds."""
         except Exception as e:
             logger.error(f"Failed to upload video: {e}")
             raise
+
+    def _pillow_text_clip(self, text: str, width: int, height: int,
+                          duration: float, fps: int,
+                          font_candidates=("DejaVuSans-Bold.ttf", "Arial-Bold.ttf", "Arial.ttf"),
+                          font_size=60, fill="white", margin_ratio=0.08) -> ImageClip:
+        # Transparent canvas
+        img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+
+        # Choose a font that exists
+        font = None
+        for name in font_candidates:
+            try:
+                font = ImageFont.truetype(name, font_size)
+                break
+            except Exception:
+                pass
+        if font is None:
+            font = ImageFont.load_default()
+
+        # Wrap text to fit
+        margin = int(width * margin_ratio)
+        max_w = width - 2 * margin
+        words = text.split()
+        lines, line = [], ""
+        for w in words:
+            test = (line + " " + w).strip()
+            bbox = draw.textbbox((0, 0), test, font=font)
+            if bbox[2] - bbox[0] > max_w and line:
+                lines.append(line)
+                line = w
+            else:
+                line = test
+        if line:
+            lines.append(line)
+
+        # Vertically center
+        line_h = draw.textbbox((0, 0), "Ay", font=font)[3]
+        total_h = len(lines) * line_h + max(0, len(lines) - 1) * int(line_h * 0.4)
+        y = (height - total_h) // 2
+        for ln in lines:
+            bbox = draw.textbbox((0, 0), ln, font=font)
+            tw = bbox[2] - bbox[0]
+            x = (width - tw) // 2
+            draw.text((x, y), ln, font=font, fill=fill)
+            y += line_h + int(line_h * 0.4)
+
+        arr = np.array(img)
+        return ImageClip(arr).with_duration(duration).with_fps(fps)
 
     async def cleanup_temp_files(
         self,
