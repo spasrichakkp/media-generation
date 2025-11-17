@@ -2,6 +2,8 @@
 
 from enum import Enum
 
+from .model_type import ModelType
+
 
 class ContentType(str, Enum):
     """Represents the type of content to be generated."""
@@ -13,11 +15,11 @@ class ContentType(str, Enum):
     def get_default_model(self) -> str:
         """Get the default AI model for this content type."""
         defaults = {
-            ContentType.IMAGE: "hunyuan-image-3.0",
-            ContentType.VIDEO: "moneyprinter-turbo",
-            ContentType.TEXT: "gpt-text-generator",
+            ContentType.IMAGE: ModelType.HUNYUAN_IMAGE_3_0,
+            ContentType.VIDEO: ModelType.get_preferred_video_model(),
+            ContentType.TEXT: ModelType.GPT_TEXT,
         }
-        return defaults[self]
+        return defaults[self].value
     
     def get_file_extension(self) -> str:
         """Get the default file extension for this content type."""
@@ -36,4 +38,3 @@ class ContentType(str, Enum):
             ContentType.TEXT: "text/plain",
         }
         return mime_types[self]
-
