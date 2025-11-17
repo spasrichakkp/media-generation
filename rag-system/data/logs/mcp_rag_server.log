@@ -1,0 +1,18 @@
+2025-11-05 13:39:55,690 - mcp_rag_server - INFO - RAG MCP tools initialized successfully
+2025-11-05 13:39:55,690 - mcp_rag_server - INFO - Collection: media_generation_code
+2025-11-05 13:39:55,695 - mcp_rag_server - INFO - Documents in index: 0
+2025-11-05 13:39:55,695 - mcp_rag_server - INFO - RAG MCP Handler initialized
+2025-11-05 13:40:11,193 - __main__ - INFO - RAG MCP tools initialized successfully
+2025-11-05 13:40:11,194 - __main__ - INFO - Collection: media_generation_code
+2025-11-05 13:40:11,195 - __main__ - INFO - Documents in index: 0
+2025-11-05 13:40:11,195 - __main__ - INFO - RAG MCP Handler initialized
+2025-11-05 13:40:11,195 - __main__ - INFO - Calling tool: search_codebase
+2025-11-05 13:40:13,635 - __main__ - INFO - Search completed: 'test search...' -> 3 results in 2440.22ms
+2025-11-05 13:40:13,635 - __main__ - INFO - Calling tool: get_codebase_stats
+2025-11-05 13:43:54,931 - __main__ - INFO - RAG MCP tools initialized successfully
+2025-11-05 13:43:54,931 - __main__ - INFO - Collection: media_generation_code
+2025-11-05 13:43:54,932 - __main__ - INFO - Documents in index: 0
+2025-11-05 13:43:54,933 - __main__ - INFO - RAG MCP Handler initialized
+2025-11-05 13:43:54,933 - __main__ - INFO - Calling tool: search_codebase
+2025-11-05 13:43:55,120 - __main__ - INFO - Search completed: 'test search...' -> 3 results in 186.84ms
+2025-11-05 13:43:55,120 - __main__ - INFO - Calling tool: get_codebase_stats

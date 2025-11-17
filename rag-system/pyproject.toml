@@ -1,7 +1,7 @@
 [project]
-name = "media-generation-rag"
-version = "0.1.0"
-description = "RAG System for Media Generation Platform - Code Search & Context Retrieval"
+name = "codebase-rag-mcp"
+version = "1.0.0"
+description = "Standalone RAG System MCP Server - Code Search & Context Retrieval for Any Codebase"
 authors = [
     {name = "Media Generation Team", email = "team@example.com"}
 ]
@@ -88,13 +88,15 @@ full = [
 rag-index = "indexer.index_all:main"
 rag-search = "cli.search:main"
 rag-serve = "api.main:main"
+rag-mcp = "mcp_rag_server:main"
+codebase-rag-mcp = "standalone_mcp:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["indexer", "embeddings", "vector_store", "retriever", "api", "utils", "cli"]
+packages = ["indexer", "embeddings", "vector_store", "retriever", "api", "utils", "cli", "mcp_rag_server"]
 
 [tool.black]
 line-length = 100

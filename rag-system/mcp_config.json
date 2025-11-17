@@ -1,0 +1,116 @@
+{
+  "version": "2.0.0",
+  "name": "rag-system-mcp",
+  "description": "RAG System for Media Generation Platform - Code search and context retrieval",
+  "mcp": {
+    "tools": {
+      "search_codebase": {
+        "description": "Search the entire codebase for relevant information using semantic search",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query text describing what you're looking for in the codebase"
+            },
+            "top_k": {
+              "type": "integer",
+              "description": "Number of results to return (default: 5, max: 20)",
+              "default": 5,
+              "minimum": 1,
+              "maximum": 20
+            },
+            "filters": {
+              "type": "object",
+              "description": "Optional metadata filters (e.g., {'file_type': 'py', 'file_path': 'backend'})",
+              "properties": {
+                "file_type": {"type": "string", "description": "Filter by file extension (py, md, etc.)"},
+                "file_path": {"type": "string", "description": "Filter by path containing this text"}
+              }
+            },
+            "min_similarity": {
+              "type": "number",
+              "description": "Minimum similarity threshold (0.0 to 1.0)",
+              "minimum": 0.0,
+              "maximum": 1.0
+            }
+          },
+          "required": ["query"]
+        }
+      },
+      "build_context": {
+        "description": "Build optimized context from search results for LLM consumption",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Original query that generated the search results"
+            },
+            "search_results": {
+              "type": "array",
+              "description": "Results returned from search_codebase tool",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {"type": "string"},
+                  "content": {"type": "string"},
+                  "metadata": {"type": "object"},
+                  "score": {"type": "number"}
+                }
+              }
+            },
+            "format_type": {
+              "type": "string",
+              "description": "Output format for context",
+              "enum": ["llm", "markdown", "json", "chat"],
+              "default": "llm"
+            },
+            "include_instructions": {
+              "type": "boolean",
+              "description": "Whether to include LLM instructions in context",
+              "default": True
+            }
+          },
+          "required": ["query", "search_results"]
+        }
+      },
+      "get_codebase_stats": {
+        "description": "Get statistics about the indexed codebase including document count and collection info",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "index_directory": {
+        "description": "Start indexing process for a directory (requires separate full indexer)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "directory_path": {
+              "type": "string",
+              "description": "Path to directory to index"
+            },
+            "force_reindex": {
+              "type": "boolean",
+              "description": "Whether to force reindexing all files",
+              "default": False
+            }
+          },
+          "required": ["directory_path"]
+        }
+      }
+    }
+  },
+  "features": {
+    "capabilities": ["tools", "context-retrieval", "semantic-search"],
+    "supports_streaming": false,
+    "requires_authentication": false
+  },
+  "metadata": {
+    "maintainer": "Media Generation Team",
+    "repository": "https://github.com/your-org/media-generation",
+    "license": "MIT",
+    "tags": ["rag", "code-search", "semantic-search", "context-ai", "development"]
+  }
+}

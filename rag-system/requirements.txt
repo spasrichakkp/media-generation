@@ -24,6 +24,7 @@ ast-comments>=1.1.2
 transformers>=4.36.0
 torch>=2.1.0
 tokenizers>=0.15.0
+numpy==1.26.4
 
 # Search & Ranking
 rank-bm25>=0.2.2
