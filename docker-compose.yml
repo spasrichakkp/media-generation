@@ -1,180 +1,231 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
-    container_name: media-gen-postgres
+  db:
+    image: postgres:16
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: media_generation
-      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - media-gen-network
-    command:
-      - "postgres"
-      - "-c"
-      - "max_connections=200"
 
-  # Redis Cache & Message Broker
   redis:
-    image: redis:7-alpine
-    container_name: media-gen-redis
-    command: redis-server --appendonly yes
+    image: redis:7
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - media-gen-network
 
-  # MinIO (S3-compatible storage)
   minio:
     image: minio/minio:latest
-    container_name: media-gen-minio
-    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9000:9000" # API
-      - "9001:9001" # Console
     volumes:
       - minio_data:/data
+    command: server /data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    networks:
-      - media-gen-network
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # Create MinIO bucket
-  minio-init:
-    image: minio/mc:latest
-    container_name: media-gen-minio-init
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      sleep 5;
-      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb myminio/media-generation --ignore-existing;
-      /usr/bin/mc anonymous set public myminio/media-generation;
-      exit 0;
-      "
-    networks:
-      - media-gen-network
-
-  # FastAPI Backend
   api:
-    build:
+    build: 
       context: ./backend
       dockerfile: Dockerfile
-    container_name: media-gen-api
-    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
-      - API_SECRET_KEY=dev-secret-key-change-in-production
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/media_generation
+      - APP_NAME=Media Generation Platform
+      - APP_VERSION=0.1.0
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=info
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_SECRET_KEY=123e4567-e89b-12d3-a456-426614174000
+      - API_RATE_LIMIT=100
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/media_generation
+      - DATABASE_POOL_SIZE=20
+      - DATABASE_MAX_OVERFLOW=10
+      - DATABASE_ECHO=false
       - REDIS_URL=redis://redis:6379/0
+      - REDIS_MAX_CONNECTIONS=50
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - CELERY_TASK_ALWAYS_EAGER=false
       - S3_ENDPOINT_URL=http://minio:9000
       - S3_ACCESS_KEY_ID=minioadmin
       - S3_SECRET_ACCESS_KEY=minioadmin
       - S3_BUCKET_NAME=media-generation
       - S3_REGION=us-east-1
       - USE_SSL=false
-      - ENVIRONMENT=development
-      - DEBUG=true
-      - LOG_LEVEL=info
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2
+      - OLLAMA_TEMPERATURE=0.7
+      - OLLAMA_MAX_TOKENS=2000
+      - RELOAD=true
+      - WORKERS=1
+      - NSFW_DETECTION_ENABLED=false
+      - CONTENT_MODERATION_ENABLED=false
+      - CORS_ORIGINS=*
+      - CORS_ALLOW_CREDENTIALS=true
+      - CORS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS
+      - CORS_ALLOW_HEADERS=*
+      - CDN_URL=
+      - OPENAI_API_KEY=
+      - TTS_PROVIDER=edge
+      - TTS_VOICE=en-US-AriaNeural
+      - TTS_RATE=+0%
+      - TTS_VOLUME=+0%
+      - VIDEO_RESOLUTION_WIDTH=1080
+      - VIDEO_RESOLUTION_HEIGHT=1920
+      - VIDEO_FPS=30
+      - VIDEO_BITRATE=5000k
+      - VIDEO_CODEC=libx264
+      - AUDIO_CODEC=aac
+      - MAX_IMAGE_SIZE=2048
+      - MAX_VIDEO_DURATION=300
+      - DEFAULT_IMAGE_FORMAT=png
+      - DEFAULT_VIDEO_FORMAT=mp4
+      - HUNYUAN_MODEL_PATH=/models/hunyuan
+      - MONEYPRINTER_PATH=/models/moneyprinter
+      - MODEL_CACHE_DIR=/tmp/model_cache
+      - PROMETHEUS_ENABLED=false
+      - OTEL_ENABLED=false
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+      - OTEL_SERVICE_NAME=media-gen-api
+      - WEBHOOK_TIMEOUT=30
+      - WEBHOOK_MAX_RETRIES=3
+      - WEBHOOK_RETRY_DELAY=60
+      - TASK_TIMEOUT=3600
+      - TASK_MAX_RETRIES=3
+      - TASK_RETRY_DELAY=300
+      - TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/media_generation_test
+      - RATE_LIMIT_ENABLED=false
+      - RATE_LIMIT_PER_MINUTE=10
+      - RATE_LIMIT_PER_HOUR=100
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
       minio:
         condition: service_healthy
-    networks:
-      - media-gen-network
+    restart: on-failure
 
-  # Celery Worker (Unified)
-  worker:
+  celery_worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: media-gen-worker
-    command: >
-      celery -A src.infrastructure.tasks.celery_app:celery_app
-      worker --loglevel=info --concurrency=2 -Q video_generation,default
     environment:
-      - API_SECRET_KEY=dev-secret-key-change-in-production
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/media_generation
+      - APP_NAME=Media Generation Platform
+      - APP_VERSION=0.1.0
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=info
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_SECRET_KEY=123e4567-e89b-12d3-a456-426614174000
+      - API_RATE_LIMIT=100
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/media_generation
+      - DATABASE_POOL_SIZE=20
+      - DATABASE_MAX_OVERFLOW=10
+      - DATABASE_ECHO=false
       - REDIS_URL=redis://redis:6379/0
+      - REDIS_MAX_CONNECTIONS=50
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - CELERY_TASK_ALWAYS_EAGER=false
       - S3_ENDPOINT_URL=http://minio:9000
       - S3_ACCESS_KEY_ID=minioadmin
       - S3_SECRET_ACCESS_KEY=minioadmin
       - S3_BUCKET_NAME=media-generation
       - S3_REGION=us-east-1
       - USE_SSL=false
-      - ENVIRONMENT=development
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2
+      - OLLAMA_TEMPERATURE=0.7
+      - OLLAMA_MAX_TOKENS=2000
+      - RELOAD=false
+      - WORKERS=1
+      - NSFW_DETECTION_ENABLED=false
+      - CONTENT_MODERATION_ENABLED=false
+      - CORS_ORIGINS=*
+      - CORS_ALLOW_CREDENTIALS=true
+      - CORS_ALLOW_METHODS=GET,POST,PUT,DELETE,OPTIONS
+      - CORS_ALLOW_HEADERS=*
+      - CDN_URL=
+      - OPENAI_API_KEY=
+      - TTS_PROVIDER=edge
+      - TTS_VOICE=en-US-AriaNeural
+      - TTS_RATE=+0%
+      - TTS_VOLUME=+0%
+      - VIDEO_RESOLUTION_WIDTH=1080
+      - VIDEO_RESOLUTION_HEIGHT=1920
+      - VIDEO_FPS=30
+      - VIDEO_BITRATE=5000k
+      - VIDEO_CODEC=libx264
+      - AUDIO_CODEC=aac
+      - MAX_IMAGE_SIZE=2048
+      - MAX_VIDEO_DURATION=300
+      - DEFAULT_IMAGE_FORMAT=png
+      - DEFAULT_VIDEO_FORMAT=mp4
+      - HUNYUAN_MODEL_PATH=/models/hunyuan
+      - MONEYPRINTER_PATH=/models/moneyprinter
+      - MODEL_CACHE_DIR=/tmp/model_cache
+      - PROMETHEUS_ENABLED=false
+      - OTEL_ENABLED=false
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+      - OTEL_SERVICE_NAME=media-gen-api
+      - WEBHOOK_TIMEOUT=30
+      - WEBHOOK_MAX_RETRIES=3
+      - WEBHOOK_RETRY_DELAY=60
+      - TASK_TIMEOUT=3600
+      - TASK_MAX_RETRIES=3
+      - TASK_RETRY_DELAY=300
+      - TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/media_generation_test
+      - RATE_LIMIT_ENABLED=false
+      - RATE_LIMIT_PER_MINUTE=10
+      - RATE_LIMIT_PER_HOUR=100
     volumes:
       - ./backend:/app
-      - model_cache:/tmp/model_cache
+    command: >
+      sh -c "celery -A src.infrastructure.tasks.celery_app worker
+      --loglevel=info
+      --concurrency=2
+      --queues=video_generation,default
+      --max-tasks-per-child=50
+      --time-limit=3600
+      --soft-time-limit=3300"
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
       minio:
         condition: service_healthy
-    networks:
-      - media-gen-network
-
-  # Celery Flower (Monitoring)
-  flower:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: media-gen-flower
-    command: celery -A src.infrastructure.tasks.celery_app:celery_app flower --port=5555
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-    ports:
-      - "5555:5555"
-    depends_on:
-      - redis
-    networks:
-      - media-gen-network
+    restart: on-failure
 
 volumes:
   postgres_data:
-  redis_data:
   minio_data:
-  model_cache:
-
-networks:
-  media-gen-network:
-    driver: bridge
