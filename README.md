@@ -314,22 +314,83 @@ docker run --rm -p 8000:8000 \
 
 ### Docker Compose (Recommended for Full Stack)
 
+#### Step 1: Start all services
 ```bash
-# Start all services
+# Start all services (API, Celery worker, PostgreSQL, Redis, MinIO)
 docker-compose up -d
 
-# View logs
-docker-compose logs -f api
-docker-compose logs -f worker
+# Build and start all services (if changes were made to backend)
+docker-compose up -d --build
+```
 
+#### Step 2: Run database migrations
+```bash
+# Apply database schema changes
+docker-compose exec api alembic upgrade head
+```
+
+#### Step 3: Verify all services are healthy
+```bash
+# Check status of all services
+docker-compose ps
+
+# Expected output should show all services as "Up" and "healthy":
+# media-generation-api-1             Up (healthy)
+# media-generation-celery_worker-1   Up
+# media-generation-db-1              Up (healthy)
+# media-generation-redis-1           Up (healthy)
+# media-generation-minio-1           Up (healthy)
+```
+
+#### Step 4: Check service logs
+```bash
+# View all logs
+docker-compose logs
+
+# Follow logs for specific service
+docker-compose logs -f api               # API server logs
+docker-compose logs -f celery_worker     # Celery worker logs
+docker-compose logs -f db                # Database logs
+docker-compose logs -f redis             # Redis logs
+docker-compose logs -f minio             # MinIO logs
+
+# View recent logs with tail
+docker-compose logs --tail=50 api        # Last 50 lines of API logs
+docker-compose logs --tail=100 celery_worker  # Last 100 lines of Celery logs
+
+# Check only error logs
+docker-compose logs api | grep -i error
+docker-compose logs celery_worker | grep -i error
+```
+
+#### Step 5: Test Celery worker connectivity
+```bash
+# Execute test inside API container to verify Celery connection
+docker-compose exec api python -c "
+import sys
+sys.path.append('/app')
+from src.infrastructure.tasks.celery_app import celery_app
+
+# Check if Celery workers are responsive
+result = celery_app.control.inspect().stats()
+if result:
+    print('✅ Celery workers are running and responsive')
+    print(f'Workers found: {list(result.keys())}')
+else:
+    print('⚠️ No Celery workers responded')
+"
+```
+
+#### Step 6: Stop all services
+```bash
 # Stop all services
 docker-compose down
 
-# Rebuild and restart
-docker-compose up -d --build
-
-# Remove all data (WARNING: deletes database)
+# Stop and remove all data (WARNING: deletes database)
 docker-compose down -v
+
+# Rebuild and restart everything
+docker-compose down && docker-compose up -d --build
 ```
 
 ### Production Deployment Checklist
@@ -347,6 +408,154 @@ docker-compose down -v
 - [ ] Set up auto-scaling for API and workers
 - [ ] Configure health checks and readiness probes
 - [ ] Use secrets management (AWS Secrets Manager, Vault)
+
+---
+
+## 7. Video Generation Testing with cURL
+
+### Prerequisites
+- Services must be running (follow steps in Section 6)
+- Database migrations completed
+- API secret key configured
+
+### Step 1: Generate an API Key
+```bash
+# Create a new API key by calling the registration endpoint
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "username": "testuser",
+    "password": "password123"
+  }'
+```
+
+If registration is not available, use your configured API key from the environment.
+
+### Step 2: Health Check
+```bash
+curl http://localhost:8000/health
+```
+
+**Expected response:**
+```json
+{
+  "status": "healthy",
+  "components": {
+    "api": "healthy",
+    "database": "healthy"
+  }
+}
+```
+
+### Step 3: Create a Video Generation Job
+```bash
+curl -X POST http://localhost:8000/api/v1/jobs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key-here" \
+  -d '{
+    "content_type": "video",
+    "prompt": "A beautiful sunset over mountains with a serene lake in the foreground",
+    "model_name": "moneyprinter-turbo",
+    "parameters": {
+      "duration": 10,
+      "style": "cinematic",
+      "tone": "peaceful"
+    }
+  }'
+```
+
+**Expected response:**
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "user_id": "user-uuid",
+  "content_type": "video",
+  "prompt": "A beautiful sunset over mountains with a serene lake in the foreground",
+  "model_name": "moneyprinter-turbo",
+  "parameters": {"duration": 10, "style": "cinematic", "tone": "peaceful"},
+  "status": "queued",
+  "priority": 5,
+  "progress": null,
+  "created_at": "2025-01-20T12:00:00Z",
+  "updated_at": "2025-01-20T12:00:00Z",
+  "started_at": null,
+  "completed_at": null,
+  "error_message": null,
+  "retry_count": 0,
+  "result_url": null
+}
+```
+
+### Step 4: Monitor Job Progress
+```bash
+curl http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000 \
+  -H "X-API-Key: your-api-key-here"
+```
+
+**Response (Processing):**
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "processing",
+  "progress": 45,
+  "started_at": "2025-01-20T12:00:05Z",
+  ...
+}
+```
+
+**Response (Completed):**
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "completed",
+  "progress": 100,
+  "completed_at": "2025-01-20T12:02:30Z",
+  "result_url": "http://localhost:9000/media-generation/videos/123e4567.mp4",
+  ...
+}
+```
+
+### Step 5: List User Jobs
+```bash
+curl "http://localhost:8000/api/v1/jobs?page=1&page_size=10&status=processing" \
+  -H "X-API-Key: your-api-key-here"
+```
+
+### Step 6: Check Celery Worker Processing
+Monitor the Celery worker logs to see real-time processing:
+
+```bash
+# In a separate terminal, watch Celery logs
+docker-compose logs -f celery_worker
+```
+
+You should see logs similar to:
+```
+celery_worker-1  | 2025-11-15 09:12:17.218 | INFO | Starting video generation task for job c293abaf-577c-47b2-8320-ad51af254bd9
+celery_worker-1  | 2025-11-15 09:12:18.042 | INFO | Step 1: Generating video script...
+celery_worker-1  | 2025-11-15 09:12:34.625 | INFO | Script generated successfully (1787 characters)
+```
+
+### Step 7: Cancel a Job (if needed)
+```bash
+curl -X POST http://localhost:8000/api/v1/jobs/123e4567-e89b-12d3-a456-426614174000/cancel \
+  -H "X-API-Key: your-api-key-here"
+```
+
+### Testing Tips
+- Check Celery logs after creating jobs to see if they're being processed
+- Use the health endpoint to verify API status before testing
+- Monitor job status at regular intervals to track progress
+- Check database directly if needed: `docker-compose exec postgres psql -U postgres -d media_generation -c "SELECT * FROM generation_jobs;"`
+- Access generated videos through MinIO at http://localhost:9001 (minioadmin/minioadmin)
+
+### Common Test Scenarios
+- Create a simple video job and verify it processes
+- Create multiple jobs to test queue handling
+- Cancel a job that is queued but not yet started
+- Create a job with invalid parameters to test error handling
+- Monitor progress updates during processing
 
 ---
 
@@ -396,18 +605,18 @@ Jobs stuck in "queued" status for minutes.
 
 **Solution:**
 ```bash
-# Check worker logs
-docker-compose logs worker
+# Check worker logs (note: service name is celery_worker, not worker)
+docker-compose logs celery_worker
 
 # Verify worker is running
-docker-compose ps worker
+docker-compose ps celery_worker
 
 # Check Redis connection
 docker-compose exec redis redis-cli ping
 # Should return: PONG
 
 # Restart worker
-docker-compose restart worker
+docker-compose restart celery_worker
 ```
 
 #### 4. Jobs Fail Immediately
@@ -496,6 +705,7 @@ docker-compose ps
 
 # Follow logs for specific service
 docker-compose logs -f api
+docker-compose logs -f celery_worker  # Celery worker logs
 
 # Execute command in container
 docker-compose exec api python -c "from src.config import get_settings; print(get_settings())"
