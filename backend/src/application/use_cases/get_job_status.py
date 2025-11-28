@@ -99,13 +99,13 @@ class GetJobStatusUseCase:
             parameters=job.parameters,
             status=job.status.value,
             priority=job.priority,
-            progress=None,  # Progress tracking will be added later
+            progress=job.progress,
             created_at=job.created_at,
             updated_at=job.updated_at,
             started_at=job.started_at,
             completed_at=job.completed_at,
             error_message=job.error_message,
             retry_count=job.retry_count,
-            result_url=None,  # Will be populated when job completes
+            result_url=job.result_url,
         )
 

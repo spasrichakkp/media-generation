@@ -228,5 +228,6 @@ class GenerationJob:
             "error_message": self.error_message,
             "retry_count": self.retry_count,
             "webhook_url": self.webhook_url,
+            "result_url": self.result_url,
         }
 

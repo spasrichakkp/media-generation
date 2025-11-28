@@ -84,6 +84,8 @@ class MoviePyVideoGenerator(VideoGeneratorService):
             self.ollama_model = settings.ollama_model
             logger.info(f"Using Ollama for script generation: {self.ollama_model}")
             logger.info(f"Ollama endpoint: {self.ollama_base_url}")
+        elif self.llm_provider == "mock":
+            logger.info("Using Mock LLM for script generation")
         else:
             logger.error(f"Unknown LLM provider: {self.llm_provider}")
 
@@ -118,6 +120,12 @@ class MoviePyVideoGenerator(VideoGeneratorService):
             return await self._generate_script_ollama(prompt, parameters, progress_callback)
         elif self.llm_provider in ["openai", "openrouter"]:
             return await self._generate_script_openai(prompt, parameters, progress_callback)
+        elif self.llm_provider == "mock":
+            return """SCENE 1: A beautiful sunset over the ocean.
+NARRATION: The sun dips below the horizon, painting the sky in vibrant orange and purple hues.
+
+SCENE 2: Waves gently crashing on the shore.
+NARRATION: The rhythmic sound of waves brings a sense of peace and tranquility to the ending day."""
         else:
             raise ValueError(f"Unknown LLM provider: {self.llm_provider}")
 

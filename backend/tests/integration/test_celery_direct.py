@@ -6,9 +6,9 @@ import time
 from uuid import uuid4
 
 from src.config import get_settings
-from src.domain.entities import GenerationJob, JobStatus, User
-from src.domain.value_objects import ContentType, ModelType
-from src.infrastructure.adapters.database import PostgreSQLGenerationJobRepository
+from src.domain.entities import GenerationJob, User
+from src.domain.value_objects import ContentType, ModelType, JobStatus
+from src.infrastructure.adapters.database import PostgreSQLJobRepository
 from src.infrastructure.database import get_session_factory
 from src.infrastructure.tasks.video_generation import generate_video_task
 
@@ -58,7 +58,7 @@ async def test_celery_task():
     print("Saving job to database...")
     session_factory = get_session_factory(settings)
     async with session_factory() as session:
-        repo = PostgreSQLGenerationJobRepository(session)
+        repo = PostgreSQLJobRepository(session)
         await repo.create(job)
         await session.commit()
     print("✅ Job saved to database")
@@ -88,7 +88,7 @@ async def test_celery_task():
         
         # Get job from database
         async with session_factory() as session:
-            repo = PostgreSQLGenerationJobRepository(session)
+            repo = PostgreSQLJobRepository(session)
             updated_job = await repo.get_by_id(job.id)
         
         if updated_job:

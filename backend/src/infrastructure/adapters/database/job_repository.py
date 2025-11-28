@@ -246,6 +246,8 @@ class PostgreSQLJobRepository(JobRepository):
             error_message=model.error_message,
             retry_count=model.retry_count,
             webhook_url=model.webhook_url,
+            result_url=model.result_url,
+            progress=model.progress,
         )
     
     def _to_model(self, entity: GenerationJob) -> GenerationJobModel:
@@ -266,6 +268,8 @@ class PostgreSQLJobRepository(JobRepository):
             error_message=entity.error_message,
             retry_count=entity.retry_count,
             webhook_url=entity.webhook_url,
+            result_url=entity.result_url,
+            progress=entity.progress,
         )
     
     def _update_model_from_entity(
@@ -282,4 +286,6 @@ class PostgreSQLJobRepository(JobRepository):
         model.error_message = entity.error_message
         model.retry_count = entity.retry_count
         model.parameters = entity.parameters
+        model.result_url = entity.result_url
+        model.progress = entity.progress
 

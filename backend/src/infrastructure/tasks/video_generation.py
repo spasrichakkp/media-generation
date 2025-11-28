@@ -87,6 +87,7 @@ async def update_job_status(
                 job.result_url = result_url
 
             # Save to database
+            logger.info(f"Updating job {job_id} in DB. Status: {status}, Result URL: {job.result_url}")
             await job_repo.update(job)
             await session.commit()
 
