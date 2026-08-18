@@ -86,6 +86,28 @@ class Settings(BaseSettings):
     tts_rate: str = Field(default="+0%", alias="TTS_RATE")  # Speech rate adjustment
     tts_volume: str = Field(default="+0%", alias="TTS_VOLUME")  # Volume adjustment
 
+# Text-to-Speech Settings
+    tts_provider: str = Field(default="edge", alias="TTS_PROVIDER")  # edge, openai, azure
+    tts_voice: str = Field(default="en-US-AriaNeural", alias="TTS_VOICE")
+    tts_rate: str = Field(default="+0%", alias="TTS_RATE")  # Speech rate adjustment
+    tts_volume: str = Field(default="+0%", alias="TTS_VOLUME")  # Volume adjustment
+    tts_openrouter_primary_model: str = Field(
+        default="deepgram/flux-tts:free", alias="TTS_OPENRO_PRIMARY_MODEL"
+    )  # Primary TTS model on OpenRouter
+    tts_openrouter_fallback_model: str = Field(
+        default="fish-audio/s2.1-pro-free:free", alias="TTS_OPENRO_FALLBACK_MODEL"
+    )  # Fallback TTS model on OpenRouter
+
+    # Video Generator Settings
+    video_provider: str = Field(
+        default="moviepy", alias="VIDEO_PROVIDER"
+    )  # moviepy, huggingface
+
+    # HuggingFace Settings
+    hf_model_name: str = Field(
+        default="Wan-AI/Wan2.2-TI2V-5B", alias="HF_MODEL_NAME"
+    )
+
     # LLM Settings (for script generation)
     llm_provider: str = Field(
         default="openrouter", alias="LLM_PROVIDER"

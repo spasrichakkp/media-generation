@@ -37,6 +37,7 @@ async def seed():
         
         try:
             created_user = await repo.create(user)
+            await session.commit()
             logger.info("="*50)
             logger.info(f"✅ Created Admin User")
             logger.info(f"ID: {created_user.id}")

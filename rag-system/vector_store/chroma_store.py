@@ -166,7 +166,7 @@ class ChromaVectorStore:
             ```
         """
         # Prepare filters
-        where_clause = filters if filters else {}
+        where_clause = filters if filters else None
 
         # Search in ChromaDB
         results = self.collection.query(
@@ -206,7 +206,7 @@ class ChromaVectorStore:
         Returns:
             List of result lists for each query
         """
-        where_clause = filters if filters else {}
+        where_clause = filters if filters else None
 
         results = self.collection.query(
             query_texts=query_texts,

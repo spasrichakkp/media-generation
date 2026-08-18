@@ -236,6 +236,57 @@ async def build_context(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Import Scraper
+from indexer.url_scraper import UrlScraper
+
+class IngestUrlRequest(BaseModel):
+    """Request model for URL ingestion."""
+    url: str
+    generate_summary: bool = True
+
+class IngestUrlResponse(BaseModel):
+    """Response model for URL ingestion."""
+    document_id: str
+    title: str
+    summary: Optional[str] = None
+    chunk_count: int
+
+@app.post("/ingest/url")
+async def ingest_url(request: IngestUrlRequest) -> IngestUrlResponse:
+    """Ingest content from a URL."""
+    if searcher is None:
+        raise HTTPException(status_code=500, detail="Searcher not initialized")
+    
+    # Scrape URL
+    scraper = UrlScraper()
+    data = await scraper.scrape(request.url)
+    
+    if not data:
+        raise HTTPException(status_code=400, detail=f"Failed to scrape URL: {request.url}")
+    
+    # Add to vector store
+    # Note: We wrap it in a list as add_documents expects a list
+    try:
+        added_ids = searcher.add_documents([data])
+        
+        summary = None
+        if request.generate_summary and context_builder:
+            # Generate a quick summary using the first few chunks or a specific summary prompt
+            # For now, we'll just take the first 500 chars as a preview/summary
+            summary = data["content"][:500] + "..."
+            
+        return IngestUrlResponse(
+            document_id=added_ids[0] if added_ids else "unknown",
+            title=data["metadata"]["title"],
+            summary=summary,
+            chunk_count=1 # This is an approximation, searcher handles chunking internally
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to ingest URL: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Add more endpoints as needed
 # - Index management
 # - Collection operations

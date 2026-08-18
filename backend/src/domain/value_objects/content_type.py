@@ -11,6 +11,7 @@ class ContentType(str, Enum):
     IMAGE = "image"
     VIDEO = "video"
     TEXT = "text"
+    URL = "url"
     
     def get_default_model(self) -> str:
         """Get the default AI model for this content type."""
@@ -18,6 +19,7 @@ class ContentType(str, Enum):
             ContentType.IMAGE: ModelType.HUNYUAN_IMAGE_3_0,
             ContentType.VIDEO: ModelType.get_preferred_video_model(),
             ContentType.TEXT: ModelType.GPT_TEXT,
+            ContentType.URL: ModelType.GPT_TEXT,  # URL processing uses LLM for summary
         }
         return defaults[self].value
     
@@ -27,6 +29,7 @@ class ContentType(str, Enum):
             ContentType.IMAGE: "png",
             ContentType.VIDEO: "mp4",
             ContentType.TEXT: "txt",
+            ContentType.URL: "json",  # URL processing returns JSON summary
         }
         return extensions[self]
     
@@ -36,5 +39,6 @@ class ContentType(str, Enum):
             ContentType.IMAGE: "image/png",
             ContentType.VIDEO: "video/mp4",
             ContentType.TEXT: "text/plain",
+            ContentType.URL: "application/json",
         }
         return mime_types[self]

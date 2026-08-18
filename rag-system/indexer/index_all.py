@@ -22,16 +22,18 @@ from typing import List, Dict, Set, Optional
 import hashlib
 import json
 from datetime import datetime
+import fnmatch
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from code_parser import CodeParser
-from doc_parser import DocParser
-from chunker import SemanticChunker
-from metadata_extractor import MetadataExtractor
+from .code_parser import CodeParser
+from .doc_parser import DocParser
+from .chunker import SemanticChunker as Chunker
+from .metadata_extractor import MetadataExtractor
 
 # Import vector store and embeddings
+from retriever.semantic_search import SemanticSearcher
 import yaml
 
 # Configure logging
@@ -54,8 +56,22 @@ class IndexManager:
         self.base_path = Path(self.config["indexing"]["base_path"]).resolve()
         self.code_parser = CodeParser()
         self.doc_parser = DocParser()
-        self.chunker = SemanticChunker(self.config)
+        self.chunker = Chunker(self.config)
         self.metadata_extractor = MetadataExtractor()
+
+        # Initialize SemanticSearcher
+        try:
+            embed_config = self.config.get("embeddings", {})
+            store_config = self.config.get("vector_store", {}).get("chromadb", {})
+            
+            self.searcher = SemanticSearcher(
+                embedding_model_name=embed_config.get("model_name", "sentence-transformers/all-MiniLM-L6-v2"),
+                persist_directory=store_config.get("persist_directory", "./data/chroma"),
+                collection_name=store_config.get("collection_name", "media_generation_code")
+            )
+        except Exception as e:
+            logger.warning(f"Failed to initialize SemanticSearcher: {e}")
+            self.searcher = None
 
         # Track indexed files
         self.index_state_file = Path("./data/index_state.json")
@@ -156,17 +172,35 @@ class IndexManager:
             matched = list(base_path.glob(pattern))
             all_files.extend(matched)
 
-        # Remove duplicates
-        all_files = list(set(all_files))
+        # Remove duplicates and resolve to absolute
+        all_files = list(set([f.resolve() for f in all_files]))
 
         # Apply exclude patterns
         filtered_files = []
         for file_path in all_files:
             should_include = True
-            for exclude_pattern in exclude_patterns:
-                if file_path.match(exclude_pattern):
-                    should_include = False
-                    break
+            try:
+                # Get relative path for matching
+                # Handle case where file might be outside base_path (though unlikely with glob)
+                if file_path.is_absolute():
+                     rel_path = file_path.relative_to(self.base_path)
+                else:
+                     rel_path = file_path
+                
+                rel_path_str = str(rel_path)
+                
+                for exclude_pattern in exclude_patterns:
+                    # check both fnmatch and direct match on relative path
+                    if rel_path.match(exclude_pattern) or fnmatch.fnmatch(rel_path_str, exclude_pattern):
+                        should_include = False
+                        break
+            except ValueError:
+                # If path isn't relative to base, skip exclusion check or handle appropriately
+                # defaulting to checking original path if relative check fails
+                for exclude_pattern in exclude_patterns:
+                    if file_path.match(exclude_pattern):
+                        should_include = False
+                        break
 
             if should_include and file_path.is_file():
                 filtered_files.append(file_path)
@@ -296,8 +330,25 @@ class IndexManager:
         # Chunk content
         chunks = self._chunk_content(parsed_data, file_path)
 
-        # TODO: Generate embeddings and store in vector database
-        # This will be implemented when vector_store module is ready
+        # Generate embeddings and store in vector database
+        if hasattr(self, 'searcher') and self.searcher:
+            try:
+                docs = []
+                file_key = str(file_path.relative_to(self.base_path))
+                
+                for chunk in chunks:
+                    docs.append({
+                        "id": f"{file_key}:{chunk['metadata']['chunk_index']}",
+                        "content": chunk["content"],
+                        "metadata": chunk["metadata"]
+                    })
+                
+                if docs:
+                    self.searcher.add_documents(docs)
+                    logger.info(f"Stored {len(docs)} chunks in vector index")
+            except Exception as e:
+                logger.error(f"Failed to store chunks for {file_path}: {e}")
+                self.stats["errors"] += 1
 
         # Update index state
         file_key = str(file_path.relative_to(self.base_path))

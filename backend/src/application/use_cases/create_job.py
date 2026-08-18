@@ -2,8 +2,10 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 from uuid import UUID
+
+from pydantic_settings import BaseSettings
 
 from ...domain.entities import GenerationJob
 from ...domain.repositories import JobRepository, UserRepository
@@ -14,6 +16,10 @@ from ..exceptions import (
     ResourceNotFoundError,
     ValidationError,
 )
+
+from ...infrastructure.tasks.video_generation import generate_video_task
+
+from ...config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +128,14 @@ class CreateGenerationJobUseCase:
         
         logger.debug(f"Created job entity: {job.id}")
         
-        # 4. Save job to database
+        # 4. Optional: Enrich prompt with RAG context
+        enriched_prompt = request.prompt
+        if getattr(get_settings(), 'ENABLE_RAG_CONTEXT', False):
+            from ..dtos import CreateJobRequest
+            enriched_prompt = await self._enrich_prompt_with_rag(request.prompt, content_type, request.parameters)
+            logger.info(f"RAG-enriched prompt ({len(enriched_prompt)} chars) for job {job.id}")
+        
+        # 5. Save job to database
         try:
             saved_job = await self.job_repository.create(job)
             logger.info(f"Job created successfully: {saved_job.id}")
@@ -159,6 +172,77 @@ class CreateGenerationJobUseCase:
         response = self._to_response_dto(saved_job)
 
         return response
+    
+    async def _enrich_prompt_with_rag(
+        self,
+        prompt: str,
+        content_type: ContentType,
+        parameters: Dict[str, Any],
+    ) -> str:
+        """
+        Enrich the generation prompt with RAG context from the codebase.
+        
+        Uses the RAG MCP system to search for relevant code snippets,
+        patterns, or examples that can make the generated script more
+        informed and contextual.
+        
+        Args:
+            prompt: Original user prompt
+            content_type: Type of content (video, image, text)
+            parameters: Additional generation parameters
+            
+        Returns:
+            Enriched prompt with RAG context incorporated
+        """
+        try:
+            from ...infrastructure.mcp_rag import get_rag_tools
+            
+            rag_tools = get_rag_tools()
+            if not rag_tools or not rag_tools._initialized:
+                logger.warning("RAG tools not available, returning original prompt")
+                return prompt
+            
+            # Determine search query based on content type
+            if content_type == ContentType.VIDEO:
+                search_query = f"video generation {prompt[:100]}"
+            elif content_type == ContentType.IMAGE:
+                search_query = f"image generation {prompt[:100]}"
+            else:
+                search_query = f"content generation {prompt[:100]}"
+            
+            # Search the codebase
+            search_results = await rag_tools.search_codebase(
+                query=search_query,
+                top_k=5,
+                min_similarity=0.3,
+            )
+            
+            if not search_results or search_results.get("results_count", 0) == 0:
+                logger.info("No RAG context found, returning original prompt")
+                return prompt
+            
+            # Build context from search results
+            context_result = await rag_tools.build_context(
+                query=prompt,
+                search_results=search_results.get("results", []),
+                format_type="llm",
+                include_instructions=True,
+            )
+            
+            if context_result.get("success", False):
+                context = context_result.get("context", "")
+                if context and context.strip():
+                    # Append contextual information to the prompt
+                    enriched = f"{prompt}\n\n---\nCodebase context:\n{context}"
+                    logger.info(f"RAG context incorporated: {len(context)} chars")
+                    return enriched
+            
+            logger.info("RAG context build failed, returning original prompt")
+            return prompt
+            
+        except Exception as e:
+            logger.error(f"RAG prompt enrichment failed: {e}")
+            return prompt
     
     def _to_response_dto(self, job: GenerationJob) -> JobResponse:
         """

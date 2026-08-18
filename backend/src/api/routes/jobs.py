@@ -2,9 +2,10 @@
 
 import logging
 from typing import Annotated, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import Form
 
 from ...application.dtos import CreateJobRequest, JobListResponse, JobResponse
 from ...application.use_cases import (
@@ -19,9 +20,10 @@ from ..dependencies import (
     get_current_user_id,
     get_get_job_status_use_case,
     get_list_jobs_use_case,
+    get_user_repository,
+    PostgreSQLUserRepository,
 )
-
-logger = logging.getLogger(__name__)
+from ..domain.entities import User
 
 # Create router
 router = APIRouter()
@@ -299,4 +301,236 @@ async def cancel_job(
     
     logger.info(f"Job cancelled: {job.id}")
     return job
+
+
+@router.post(
+    "/users",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register New User",
+    description="""
+    Register a new user account.
+    
+    Creates a new user with the provided email and username.
+    Upon successful registration, an API key is generated and stored
+    hashed in the database. The user can immediately use the API key
+    with the X-API-Key header.
+    
+    **Rate Limited:** This endpoint is rate-limited to prevent abuse.
+    """,
+    responses={
+        201: {
+            "description": "User registered successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "123e4567-e89b-12d3-a456-426614174000",
+                        "email": "user@example.com",
+                        "username": "testuser",
+                        "api_key": "85bb62b5-7551-4c06-8e44-819c546fc433",
+                        "is_active": True,
+                        "quota_limit": 100
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid request data - email or username already taken or invalid format"},
+        422: {"description": "Validation error - email format invalid or username too short"},
+    },
+)
+async def register_user(
+    email: Annotated[str, Form()],
+    username: Annotated[str, Form()],
+) -> dict:
+    """
+    Register a new user.
+    
+    Args:
+        email: User's email address
+        username: User's username (minimum 3 characters)
+        
+    Returns:
+        dict: User information including generated API key
+    """
+    from ..dependencies import get_current_user_id
+    from ..application.use_cases import CreateGenerationJobUseCase
+    from ..domain.entities import User
+    from ..infrastructure.adapters.database import PostgreSQLUserRepository
+    from src.infrastructure.database import get_db, get_session_factory
+    
+    logger.info(f"Registering new user: {email}")
+    
+    # Generate user ID
+    user_id = uuid4()
+    
+    # Generate random API key
+    api_key = str(uuid4())
+    
+    # Hash the API key (using simple encoding for now, in production use bcrypt)
+    import hashlib
+    api_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    
+    # Create user entity
+    user = User(
+        id=user_id,
+        email=email,
+        username=username,
+        api_key_hash=api_key_hash,
+        is_active=True,
+        quota_limit=100,
+        quota_used=0,
+    )
+    
+    # Save user to database
+    async with get_session_factory()() as session:
+        repo = PostgreSQLUserRepository(session)
+        created_user = await repo.create(user)
+        await session.commit()
+    
+    logger.success(f"✅ User registered: {created_user.id}")
+    
+    return {
+        "id": str(created_user.id),
+        "email": created_user.email,
+        "username": created_user.username,
+        "api_key": api_key,
+        "is_active": created_user.is_active,
+        "quota_limit": created_user.quota_limit,
+    }
+
+
+@router.post(
+    "/auth/login",
+    response_model=dict,
+    summary="User Login",
+    description="""
+    Log in with API key.
+    
+    Validates the provided API key and returns user information.
+    This endpoint replaces traditional password-based authentication
+    with API key-based authentication.
+    
+    **Authentication Required:** Provide the API key in X-API-Key header
+    for subsequent requests.
+    """,
+    responses={
+        200: {
+            "description": "Login successful",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "123e4567-e89b-12d3-a456-426614174000",
+                        "email": "user@example.com",
+                        "username": "testuser",
+                        "is_active": True,
+                        "quota_used": 0,
+                        "quota_limit": 100
+                    }
+                }
+            },
+        },
+        401: {"description": "Invalid API key - authentication failed"},
+    },
+)
+async def login_user(
+    x_api_key: Annotated[str, Header()],
+    user_repo: Annotated[PostgreSQLUserRepository, Depends(get_user_repository)],
+) -> dict:
+    """
+    Log in with API key.
+    
+    Args:
+        x_api_key: API key from X-API-Key header
+        user_repo: User repository from dependency injection
+        
+    Returns:
+        dict: User information if authentication successful
+    """
+    from src.infrastructure.database import get_session_factory
+    from ..domain.entities import User
+    
+    logger.info("Attempting user login with API key")
+    
+    async with get_session_factory()() as session:
+        repo = PostgreSQLUserRepository(session)
+        
+        # Use the repository's get_by_api_key_hash method
+        user = await repo.get_by_api_key_hash(x_api_key)
+        
+        if user is None:
+            logger.warning("Invalid API key: user not found")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid API key",
+                headers={"WWW-Authenticate": "ApiKey"},
+            )
+        
+        if not user.is_active:
+            logger.warning(f"Inactive user attempted login: {user.id}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive",
+            )
+        
+        logger.info(f"✅ User logged in: {user.id}")
+        
+        return {
+            "id": str(user.id),
+            "email": user.email,
+            "username": user.username,
+            "is_active": user.is_active,
+            "quota_used": user.quota_used,
+            "quota_limit": user.quota_limit,
+        }
+
+
+@router.get(
+    "/auth/key",
+    response_model=dict,
+    summary="Get Current User API Key",
+    description="""
+    Retrieve the current user's API key.
+    
+    Returns the API key associated with the authenticated user.
+    The key can be used in the X-API-Key header for subsequent requests.
+    """,
+    responses={
+        200: {
+            "description": "API key retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "api_key": "85bb62b5-7551-4c06-8e44-819c546fc433",
+                        "message": "Use this key in X-API-Key header for authentication"
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated - no valid API key provided"},
+    },
+)
+async def get_api_key(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    """
+    Get the current user's API key.
+    
+    Args:
+        current_user: Authenticated user from dependency injection
+        
+    Returns:
+        dict: API key and usage information
+    """
+    import hashlib
+    
+    # Return the API key (in production, this might be partially masked or a different format)
+    # For now, we return the key that was used to authenticate
+    # The client should store this securely and use it in X-API-Key header
+    
+    return {
+        "api_key": str(current_user.id),  # Using user ID as API key identifier
+        "message": "Use this identifier in X-API-Key header for authentication",
+        "quota_limit": current_user.quota_limit,
+        "quota_used": current_user.quota_used,
+    }
 

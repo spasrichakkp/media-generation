@@ -91,7 +91,7 @@ class CreateJobRequest(BaseModel):
     @classmethod
     def validate_content_type(cls, v: str) -> str:
         """Validate content_type is one of the allowed values."""
-        allowed = {"image", "video", "text"}
+        allowed = {"image", "video", "text", "url"}
         if v.lower() not in allowed:
             raise ValueError(f"content_type must be one of: {', '.join(allowed)}")
         return v.lower()

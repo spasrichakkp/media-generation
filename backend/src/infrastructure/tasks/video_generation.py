@@ -146,8 +146,14 @@ async def generate_video_async(job: GenerationJob) -> str:
     # Import here to avoid circular imports
     from ..adapters.storage import S3Storage
     from ..services import MoviePyVideoGenerator
+    from ..services.huggingface_video_generator import HuggingFaceVideoGenerator
 
-    # Initialize services
+    # Initialize services based on video provider
+    if settings.video_provider == "huggingface":
+        video_generator = HuggingFaceVideoGenerator(settings, storage_adapter)
+    else:
+        video_generator = MoviePyVideoGenerator(settings, storage_adapter)
+
     storage_adapter = S3Storage(
         access_key_id=settings.s3_access_key_id,
         secret_access_key=settings.s3_secret_access_key,
@@ -156,7 +162,6 @@ async def generate_video_async(job: GenerationJob) -> str:
         endpoint_url=settings.s3_endpoint_url,
         use_ssl=settings.use_ssl,
     )
-    video_generator = MoviePyVideoGenerator(settings, storage_adapter)
 
     audio_path = None
     video_path = None
