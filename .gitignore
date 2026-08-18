@@ -7,3 +7,38 @@
 .kiro/steering/byterover-rules.md
 .qoder/rules/byterover-rules.md
 .augment/rules/byterover-rules.md
+
+# Local environment and runtime files
+.env.live_test
+.DS_Store
+.coverage
+
+# Local backup files
+backend/.env.backup
+
+# Local secrets and keys
+backend/.env
+
+# RAG system local data
+rag-system/.env
+rag-system/.env.backup
+rag-system/data/chroma/
+rag-system/data/index_state.json
+rag-system/embeddings/__pycache__/
+rag-system/index_debug.log
+rag-system/indexer/__pycache__/
+rag-system/temp_index_test/
+
+# Video generation temp files
+*.wav
+*.mp4
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Distribution / packaging
+dist/
+build/
+egg-info/

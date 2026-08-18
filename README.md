@@ -853,20 +853,12 @@ Brief description of changes
 - [ ] Tests added/updated
 ```
 
----
-
-## License
+License
 
 MIT License - See LICENSE file for details.
-
----
 
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/your-org/media-generation/issues)
 - **Documentation**: http://localhost:8000/docs (when running)
 - **Architecture**: See hexagonal architecture in `backend/src/` directory structure
-
----
-
-**Built with FastAPI, Celery, and Hexagonal Architecture** 🚀
