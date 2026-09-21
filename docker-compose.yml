@@ -26,13 +26,13 @@ services:
       retries: 5
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -62,6 +62,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
     environment:
       - APP_NAME=Media Generation Platform
       - APP_VERSION=0.1.0
@@ -70,7 +72,6 @@ services:
       - LOG_LEVEL=info
       - API_HOST=0.0.0.0
       - API_PORT=8000
-      - API_SECRET_KEY=123e4567-e89b-12d3-a456-426614174000
       - API_RATE_LIMIT=100
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/media_generation
       - DATABASE_POOL_SIZE=20
@@ -82,8 +83,6 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - CELERY_TASK_ALWAYS_EAGER=false
       - S3_ENDPOINT_URL=http://minio:9000
-      - S3_ACCESS_KEY_ID=minioadmin
-      - S3_SECRET_ACCESS_KEY=minioadmin
       - S3_BUCKET_NAME=media-generation
       - S3_REGION=us-east-1
       - USE_SSL=false
@@ -117,6 +116,7 @@ services:
       - DEFAULT_IMAGE_FORMAT=png
       - DEFAULT_VIDEO_FORMAT=mp4
       - HUNYUAN_MODEL_PATH=/models/hunyuan
+      - S3_PUBLIC_ENDPOINT_URL=${S3_PUBLIC_ENDPOINT_URL:-http://localhost:9000}
       - MONEYPRINTER_PATH=/models/moneyprinter
       - MODEL_CACHE_DIR=/tmp/model_cache
       - PROMETHEUS_ENABLED=false
@@ -150,6 +150,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
     environment:
       - APP_NAME=Media Generation Platform
       - APP_VERSION=0.1.0
@@ -158,7 +160,6 @@ services:
       - LOG_LEVEL=info
       - API_HOST=0.0.0.0
       - API_PORT=8000
-      - API_SECRET_KEY=123e4567-e89b-12d3-a456-426614174000
       - API_RATE_LIMIT=100
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/media_generation
       - DATABASE_POOL_SIZE=20
@@ -170,8 +171,6 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - CELERY_TASK_ALWAYS_EAGER=false
       - S3_ENDPOINT_URL=http://minio:9000
-      - S3_ACCESS_KEY_ID=minioadmin
-      - S3_SECRET_ACCESS_KEY=minioadmin
       - S3_BUCKET_NAME=media-generation
       - S3_REGION=us-east-1
       - USE_SSL=false
@@ -205,6 +204,7 @@ services:
       - DEFAULT_IMAGE_FORMAT=png
       - DEFAULT_VIDEO_FORMAT=mp4
       - HUNYUAN_MODEL_PATH=/models/hunyuan
+      - S3_PUBLIC_ENDPOINT_URL=${S3_PUBLIC_ENDPOINT_URL:-http://localhost:9000}
       - MONEYPRINTER_PATH=/models/moneyprinter
       - MODEL_CACHE_DIR=/tmp/model_cache
       - PROMETHEUS_ENABLED=false

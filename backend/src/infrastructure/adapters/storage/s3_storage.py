@@ -48,6 +48,7 @@ class S3Storage:
         region: str = "us-east-1",
         endpoint_url: Optional[str] = None,
         use_ssl: bool = True,
+        public_endpoint_url: Optional[str] = None,
     ) -> None:
         """
         Initialize S3/MinIO storage adapter.
@@ -65,6 +66,7 @@ class S3Storage:
         self.bucket_name = bucket_name
         self.region = region
         self.endpoint_url = endpoint_url
+        self.public_endpoint_url = public_endpoint_url
         self.use_ssl = use_ssl
         
         # Session (initialized in connect())
@@ -259,7 +261,7 @@ class S3Storage:
         try:
             async with session.client(
                 "s3",
-                endpoint_url=self.endpoint_url,
+                endpoint_url=self.public_endpoint_url or self.endpoint_url,
                 use_ssl=self.use_ssl,
             ) as s3_client:
                 client_method = "get_object" if http_method == "GET" else "put_object"

@@ -1,6 +1,6 @@
 # Media Generation Platform
 
-A production-ready backend API for AI-powered video generation with clean hexagonal architecture, asynchronous processing, and scalable infrastructure.
+A backend API for AI-powered realistic video generation with clean hexagonal architecture, asynchronous processing, and scalable infrastructure.
 
 ---
 
@@ -9,7 +9,7 @@ A production-ready backend API for AI-powered video generation with clean hexago
 The Media Generation Platform is a containerized backend service designed for automated video content generation using AI and modern software engineering practices.
 
 **Core Capabilities:**
-- **Video Generation**: Text-to-video using MoviePy, LLM script generation (Ollama/OpenAI), and text-to-speech (Edge TTS)
+- **Video Generation**: Wan 2.2 text-to-video through Hugging Face Inference Providers, with optional narration and S3-compatible storage
 - **Asynchronous Job Processing**: Celery-based task queue with Redis broker for scalable, non-blocking execution
 - **Clean Architecture**: Hexagonal (Ports & Adapters) pattern with clear separation between domain, application, infrastructure, and API layers
 - **RESTful API**: FastAPI-powered with automatic OpenAPI documentation, authentication, and comprehensive error handling
@@ -19,7 +19,7 @@ The Media Generation Platform is a containerized backend service designed for au
 **Architecture Layers:**
 - **Domain**: Core business entities (GenerationJob, User, GeneratedContent) and repository interfaces
 - **Application**: Use cases (CreateJob, GetJobStatus, CancelJob, ListJobs) and DTOs
-- **Infrastructure**: Adapters for database (PostgreSQL via SQLAlchemy), cache (Redis), storage (S3), and AI services (MoviePy video generator)
+- **Infrastructure**: Adapters for database (PostgreSQL via SQLAlchemy), cache (Redis), storage (S3), and AI video services
 - **API**: FastAPI REST endpoints with authentication, validation, and error handling
 
 **Tech Stack:**
@@ -193,12 +193,12 @@ curl -X POST http://localhost:8000/api/v1/jobs \
   -H "X-API-Key: your-api-key" \
   -d '{
     "content_type": "video",
-    "prompt": "Create a 30-second promotional video about a new smartwatch with fitness tracking features",
-    "model_name": "moviepy-basic",
+    "prompt": "Photorealistic cinematic product shot of a smartwatch on a runner’s wrist, natural movement, detailed lighting, no text or subtitles",
+    "model_name": "wan-2.2-api",
     "parameters": {
-      "duration": 30,
-      "resolution": "1080x1920",
-      "fps": 30
+      "duration": 5,
+      "aspect_ratio": "16:9",
+      "seed": 42
     }
   }'
 ```
@@ -862,3 +862,7 @@ MIT License - See LICENSE file for details.
 - **Issues**: [GitHub Issues](https://github.com/your-org/media-generation/issues)
 - **Documentation**: http://localhost:8000/docs (when running)
 - **Architecture**: See hexagonal architecture in `backend/src/` directory structure
+### Realistic video generation
+
+The default video path now uses Wan 2.2 A14B through Hugging Face instead of colored text
+slides. See [video setup, supported parameters, local CUDA option, and evaluation](backend/VIDEO_GENERATION.md).

@@ -1,147 +1,173 @@
-"""Test script for HuggingFace Wan2.2 video generator."""
-
-import asyncio
-import os
-import tempfile
+"""Regression tests: model frames must survive encoding; errors must not become slides."""
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import numpy as np
 import pytest
+from moviepy import ImageSequenceClip, VideoFileClip, ColorClip
 
-from src.config import Settings, get_settings
 from src.infrastructure.services.huggingface_video_generator import HuggingFaceVideoGenerator
-from src.infrastructure.adapters.storage import S3Storage
+from src.infrastructure.services.video_generator_factory import create_video_generator, default_video_model
 
 
-class TestHuggingFaceVideoGenerator:
-    """Test cases for HuggingFace video generator."""
+@pytest.fixture
+def generator(tmp_path):
+    settings = SimpleNamespace(hf_token="test-token", hf_video_api_model="Wan-AI/Wan2.2-T2V-A14B",
+                               hf_video_timeout=60, video_provider="huggingface_api")
+    gen = HuggingFaceVideoGenerator(settings, AsyncMock(), hosted=True)
+    gen.temp_dir = tmp_path
+    return gen
 
-    @pytest.fixture
-    def settings(self):
-        """Create test settings."""
-        return get_settings()
 
-    @pytest.fixture
-    def storage(self, settings):
-        """Create S3 storage adapter for testing."""
-        return S3Storage(
-            access_key_id=settings.s3_access_key_id,
-            secret_access_key=settings.s3_secret_access_key,
-            bucket_name=settings.s3_bucket_name,
-            region=settings.s3_region,
-            endpoint_url=settings.s3_endpoint_url,
-            use_ssl=settings.use_ssl,
-        )
+def moving_video(path):
+    frames = []
+    for i in range(16):
+        f = np.zeros((64, 96, 3), dtype=np.uint8)
+        f[:, :, 1] = np.arange(96, dtype=np.uint8)[None, :] * 2
+        f[16:40, i * 3:i * 3 + 20, 0] = 255
+        frames.append(f)
+    with ImageSequenceClip(frames, fps=16) as clip:
+        clip.write_videofile(str(path), codec="libx264", logger=None)
 
-    @pytest.fixture
-    def hf_generator(self, settings, storage):
-        """Create HuggingFace video generator instance with mocked model."""
-        with patch("diffusers.WanPipeline.from_pretrained") as mock_load:
-            mock_pipe = MagicMock()
-            mock_load.return_value = mock_pipe
-            generator = HuggingFaceVideoGenerator(settings, storage)
-            # Replace the actual pipe with the mock since init already ran
-            generator.pipe = mock_pipe
-            yield generator
 
-    def test_initialization_sets_attributes(self, settings, storage):
-        """Test that initialization sets correct attributes."""
-        with patch("diffusers.WanPipeline.from_pretrained") as mock_load:
-            mock_pipe = MagicMock()
-            mock_load.return_value = mock_pipe
-            generator = HuggingFaceVideoGenerator(settings, storage)
+@pytest.mark.asyncio
+async def test_hosted_bytes_preserved_and_decodable(generator, tmp_path):
+    source = tmp_path / 'source.mp4'
+    moving_video(source)
+    data = source.read_bytes()
+    source.unlink()
+    with patch('huggingface_hub.InferenceClient') as factory:
+        factory.return_value.text_to_video.return_value = data
+        result = await generator.generate_video('fox walking', parameters={'seed':42})
+        assert Path(result).read_bytes() == data
+        args = factory.return_value.text_to_video.call_args
+        assert args.args == ('fox walking',)
+        assert args.kwargs['num_frames'] == 81
+        assert args.kwargs['extra_body']['aspect_ratio'] == '16:9'
+        with VideoFileClip(result) as clip:
+            assert np.abs(clip.get_frame(.1).astype(float) - clip.get_frame(.8)).mean() > 1
+    await generator.cleanup_temp_files(result)
+    assert not list(tmp_path.iterdir())
 
-            assert generator is not None
-            assert generator.pipe == mock_pipe
-            assert str(generator.temp_dir) == os.path.join(
-                tempfile.gettempdir(), "media_generation_hf"
-            )
-            assert generator.model_name == "Wan-AI/Wan2.2-TI2V-5B"
-            logger.info("✅ Initialization attributes test passed")
 
-    def test_health_check_when_pipe_loaded(self, hf_generator):
-        """Test health check returns True when pipe is loaded."""
-        # health_check checks if pipe is not None
-        is_healthy = hf_generator.health_check()
-        assert is_healthy is True
-        logger.info("✅ Health check (healthy) test passed")
+@pytest.mark.asyncio
+async def test_provider_failure_is_not_a_successful_placeholder(generator):
+    with patch('huggingface_hub.InferenceClient') as factory:
+        factory.return_value.text_to_video.side_effect = RuntimeError('quota exhausted')
+        with pytest.raises(RuntimeError, match='quota exhausted'):
+            await generator.generate_video('fox')
+    assert not list(generator.temp_dir.iterdir())
 
-    def test_health_check_when_pipe_missing(self, settings, storage):
-        """Test health check returns False when pipe is None."""
-        # Test the health_check method directly
-        from unittest.mock import PropertyMock
-        generator = HuggingFaceVideoGenerator.__new__(HuggingFaceVideoGenerator)
-        generator.pipe = None
-        generator.settings = settings
-        generator.storage = storage
-        generator.temp_dir = Path(tempfile.gettempdir()) / "media_generation_hf"
 
-        # Mock temp_dir existence check
-        with patch.object(generator.temp_dir, "__bool__", return_value=False):
-            is_healthy = generator.health_check()
-            assert is_healthy is False
-        logger.info("✅ Health check (unhealthy) test passed")
+@pytest.mark.asyncio
+async def test_invalid_provider_output_is_rejected(generator):
+    with patch('huggingface_hub.InferenceClient') as factory:
+        factory.return_value.text_to_video.return_value = b'{"error":"bad"}'
+        with pytest.raises(Exception):
+            await generator.generate_video('fox')
+    assert not list(generator.temp_dir.iterdir())
 
-    @pytest.mark.asyncio
-    async def test_generate_script_passthrough(self, hf_generator):
-        """Test generate_script returns the original prompt."""
-        result = await hf_generator.generate_script(prompt="Test prompt about nature")
-        assert result == "Test prompt about nature"
-        logger.info("✅ Generate script passthrough test passed")
 
-    @pytest.mark.asyncio
-    async def test_generate_voiceover_falls_back_to_edge(self, hf_generator, settings):
-        """Test generate_voiceover falls back to Edge TTS."""
-        import edge_tts
+def test_blank_video_rejected(tmp_path):
+    path = tmp_path / 'blank.mp4'
+    with ColorClip((64,64), color=(200,0,0), duration=1) as clip:
+        clip.write_videofile(str(path), fps=16, codec='libx264', logger=None)
+    with pytest.raises(RuntimeError, match='solid-color'):
+        HuggingFaceVideoGenerator._validate_video(path)
 
-        with patch("edge_tts.Communicate") as mock_commute:
-            mock_communicate = MagicMock()
-            mock_commute.return_value = mock_communicate
 
-            # Mock the save method to be async
-            async def mock_save():
-                pass
+@pytest.mark.parametrize('params', [{'duration':30}, {'duration':float('nan')}, {'seed':-1},
+                                  {'fps':30}, {'width':1080}, {'aspect_ratio':'4:3'},
+                                  {'num_inference_steps':1}, {'narration':True}])
+def test_invalid_parameters_rejected_before_inference(params):
+    with pytest.raises(ValueError):
+        HuggingFaceVideoGenerator.validate_parameters(params, True)
 
-            mock_communicate.save = mock_save
 
-            result = await hf_generator.generate_voiceover(
-                script="Test script for voiceover",
-                voice="en-US-AriaNeural",
-            )
+@pytest.mark.asyncio
+async def test_missing_token_fails_without_request(generator):
+    generator.settings.hf_token = ''
+    with patch('huggingface_hub.InferenceClient') as client:
+        with pytest.raises(ValueError, match='HF_TOKEN'):
+            await generator.generate_video('fox')
+        client.assert_not_called()
 
-            # Should return an audio path
-            assert isinstance(result, str)
-            assert len(result) > 0
-            logger.info("✅ Generate voiceover fallback test passed")
 
-    @pytest.mark.asyncio
-    async def test_upload_video_uses_storage(self, hf_generator, settings, storage):
-        """Test upload_video uses the storage adapter."""
-        with patch.object(storage, "upload_file") as mock_upload:
-            mock_upload.return_value = None
+@pytest.mark.asyncio
+async def test_upload_uses_storage_contract(generator, tmp_path):
+    path = tmp_path / 'sample.mp4'
+    path.write_bytes(b'video')
+    generator.storage.get_presigned_url.return_value = 'https://storage/video'
+    assert await generator.upload_video(str(path), 'job') == 'https://storage/video'
+    assert generator.storage.upload.call_args.kwargs['key'] == 'videos/job.mp4'
+    generator.storage.upload.return_value = False
+    with pytest.raises(RuntimeError, match='upload failed'):
+        await generator.upload_video(str(path), 'job')
 
-            job_id = "test-job-123"
-            result = await hf_generator.upload_video(
-                video_path="/tmp/test_video.mp4",
-                job_id=job_id,
-            )
 
-            # Verify storage upload was called
-            mock_upload.assert_called_once()
-            logger.info("✅ Upload video test passed")
+def test_explicit_model_overrides_provider(generator):
+    settings = generator.settings
+    settings.video_provider = 'moviepy'
+    assert create_video_generator(settings, None, 'wan-2.2-api').hosted
+    assert not create_video_generator(settings, None, 'wan-2.2-local').hosted
+    assert default_video_model(settings) == 'moneyprinter-turbo'
+    with pytest.raises(ValueError, match='no implemented generator'):
+        create_video_generator(settings, None, 'luma-dream-machine')
 
-    @pytest.mark.asyncio
-    async def test_cleanup_temp_files(self, hf_generator):
-        """Test cleanup_temp_files removes files."""
-        # Create a temp file
-        temp_file = str(hf_generator.temp_dir / "test_file.mp4")
-        os.makedirs(hf_generator.temp_dir, exist_ok=True)
-        with open(temp_file, "w") as f:
-            f.write("test content")
 
-        # Call cleanup
-        await hf_generator.cleanup_temp_files(temp_file)
+@pytest.mark.asyncio
+async def test_local_pipeline_frames_are_exported(generator, monkeypatch):
+    import sys
+    import contextlib
+    from src.infrastructure.services.huggingface_video_generator import _LOCAL_PIPELINES
+    pipeline = MagicMock()
+    frames = [np.zeros((32,32,3),dtype=np.uint8), np.ones((32,32,3),dtype=np.uint8)]
+    pipeline.return_value.frames = [frames]
+    diffusers = MagicMock()
+    diffusers.WanPipeline.from_pretrained.return_value = pipeline
+    torch = MagicMock()
+    torch.cuda.is_available.return_value = True
+    torch.inference_mode = contextlib.nullcontext
+    utils = MagicMock()
+    monkeypatch.setitem(sys.modules, 'torch', torch)
+    monkeypatch.setitem(sys.modules, 'diffusers', diffusers)
+    monkeypatch.setitem(sys.modules, 'diffusers.utils', utils)
+    generator.settings.hf_model_name = 'Wan-AI/Wan2.2-TI2V-5B-Diffusers'
+    _LOCAL_PIPELINES.clear()
+    generator._generate_local('fox', {'duration':5}, generator.temp_dir / 'out.mp4')
+    assert utils.export_to_video.call_args.args[0] is frames
+    assert pipeline.call_args.kwargs['num_frames'] == 121
+    assert 'duration' not in pipeline.call_args.kwargs
+    assert 'fps' not in pipeline.call_args.kwargs
+    _LOCAL_PIPELINES.clear()
 
-        # File should be removed
-        assert not os.path.exists(temp_file)
-        logger.info("✅ Cleanup temp files test passed")
+
+def test_narration_mux_preserves_video_and_rejects_overlong_audio(tmp_path):
+    from moviepy import AudioClip
+    video = tmp_path / 'visual.mp4'
+    audio = tmp_path / 'short.wav'
+    long_audio = tmp_path / 'long.wav'
+    output = tmp_path / 'muxed.mp4'
+    moving_video(video)
+    for path, duration in [(audio,.5), (long_audio,2)]:
+        with AudioClip(lambda t: .1*np.sin(2*np.pi*440*t), duration=duration, fps=44100) as clip:
+            clip.write_audiofile(str(path), logger=None)
+    HuggingFaceVideoGenerator._add_audio(video, str(audio), output)
+    with VideoFileClip(str(output)) as clip:
+        assert clip.audio is not None
+        assert clip.duration == pytest.approx(1, abs=.1)
+    with pytest.raises(ValueError, match='Narration exceeds'):
+        HuggingFaceVideoGenerator._add_audio(video, str(long_audio), tmp_path/'too-long.mp4')
+
+
+@pytest.mark.asyncio
+async def test_exhausted_credits_are_actionable_and_not_retried(generator):
+    error = RuntimeError('Payment required')
+    error.response = SimpleNamespace(status_code=402)
+    with patch('huggingface_hub.InferenceClient') as factory:
+        factory.return_value.text_to_video.side_effect = error
+        with pytest.raises(RuntimeError, match='credits are exhausted'):
+            await generator.generate_video('fox')
+        assert factory.return_value.text_to_video.call_count == 1
+    assert not list(generator.temp_dir.iterdir())

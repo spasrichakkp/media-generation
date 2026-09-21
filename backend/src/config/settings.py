@@ -1,7 +1,8 @@
 """Application settings using Pydantic v2."""
 
 from functools import lru_cache
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,7 +16,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file="backend/.env",
+        env_file=Path(__file__).resolve().parents[2] / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -52,6 +53,7 @@ class Settings(BaseSettings):
 
     # Storage (S3/MinIO)
     s3_endpoint_url: Optional[str] = Field(default=None, alias="S3_ENDPOINT_URL")
+    s3_public_endpoint_url: Optional[str] = Field(default=None, alias="S3_PUBLIC_ENDPOINT_URL")
     s3_access_key_id: str = Field(alias="S3_ACCESS_KEY_ID")
     s3_secret_access_key: str = Field(alias="S3_SECRET_ACCESS_KEY")
     s3_bucket_name: str = Field(alias="S3_BUCKET_NAME")
@@ -99,14 +101,18 @@ class Settings(BaseSettings):
     )  # Fallback TTS model on OpenRouter
 
     # Video Generator Settings
-    video_provider: str = Field(
-        default="moviepy", alias="VIDEO_PROVIDER"
-    )  # moviepy, huggingface
+    video_provider: Literal["huggingface_api", "huggingface", "moviepy"] = Field(
+        default="huggingface_api", alias="VIDEO_PROVIDER"
+    )
 
     # HuggingFace Settings
     hf_model_name: str = Field(
-        default="Wan-AI/Wan2.2-TI2V-5B", alias="HF_MODEL_NAME"
+        default="Wan-AI/Wan2.2-TI2V-5B-Diffusers", alias="HF_MODEL_NAME"
     )
+
+    hf_token: Optional[str] = Field(default=None, alias="HF_TOKEN", repr=False)
+    hf_video_api_model: str = Field(default="Wan-AI/Wan2.2-T2V-A14B", alias="HF_VIDEO_API_MODEL")
+    hf_video_timeout: int = Field(default=900, ge=30, le=1800, alias="HF_VIDEO_TIMEOUT")
 
     # LLM Settings (for script generation)
     llm_provider: str = Field(

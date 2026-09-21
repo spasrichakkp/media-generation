@@ -53,3 +53,6 @@ aiohttp==3.11.11  # HTTP client for Ollama API
 
 # Development Dependencies (install with: pip install -r requirements-dev.txt)
 
+
+# Hosted video inference (GPU packages are optional)
+huggingface-hub>=0.34.0,<1.0

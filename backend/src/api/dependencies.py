@@ -93,7 +93,7 @@ async def get_create_job_use_case(
     Returns:
         CreateGenerationJobUseCase: Use case instance
     """
-    return CreateGenerationJobUseCase(job_repo, user_repo)
+    return CreateGenerationJobUseCase(job_repo, user_repo, commit=job_repo.session.commit)
 
 
 async def get_get_job_status_use_case(

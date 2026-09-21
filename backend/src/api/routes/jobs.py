@@ -18,12 +18,15 @@ from ..dependencies import (
     get_cancel_job_use_case,
     get_create_job_use_case,
     get_current_user_id,
+    get_current_user,
     get_get_job_status_use_case,
     get_list_jobs_use_case,
     get_user_repository,
     PostgreSQLUserRepository,
 )
-from ..domain.entities import User
+from ...domain.entities import User
+
+logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter()
@@ -54,8 +57,8 @@ router = APIRouter()
                         "user_id": "123e4567-e89b-12d3-a456-426614174001",
                         "content_type": "video",
                         "prompt": "A beautiful sunset over mountains",
-                        "model_name": "moneyprinter-turbo",
-                        "parameters": {"duration": 5, "resolution": "1080p"},
+                        "model_name": "wan-2.2-api",
+                        "parameters": {"duration": 5, "aspect_ratio": "16:9"},
                         "status": "queued",
                         "priority": 5,
                         "progress": None,
@@ -354,7 +357,7 @@ async def register_user(
     """
     from ..dependencies import get_current_user_id
     from ..application.use_cases import CreateGenerationJobUseCase
-    from ..domain.entities import User
+    from ...domain.entities import User
     from ..infrastructure.adapters.database import PostgreSQLUserRepository
     from src.infrastructure.database import get_db, get_session_factory
     
@@ -447,7 +450,7 @@ async def login_user(
         dict: User information if authentication successful
     """
     from src.infrastructure.database import get_session_factory
-    from ..domain.entities import User
+    from ...domain.entities import User
     
     logger.info("Attempting user login with API key")
     

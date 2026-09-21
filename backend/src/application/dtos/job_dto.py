@@ -27,7 +27,7 @@ class CreateJobRequest(BaseModel):
         request = CreateJobRequest(
             prompt="A beautiful sunset over mountains",
             content_type="video",
-            parameters={"duration": 5, "resolution": "1080p"}
+            parameters={"duration": 5, "aspect_ratio": "16:9"}
         )
         ```
     """
@@ -39,11 +39,10 @@ class CreateJobRequest(BaseModel):
             "example": {
                 "prompt": "A beautiful sunset over mountains with birds flying",
                 "content_type": "video",
-                "model_name": "moneyprinter-turbo",
+                "model_name": "wan-2.2-api",
                 "parameters": {
                     "duration": 5,
-                    "resolution": "1080p",
-                    "voice": "en-US-Neural2-A"
+                    "aspect_ratio": "16:9"
                 },
                 "priority": 5,
                 "webhook_url": "https://example.com/webhook"
@@ -182,8 +181,8 @@ class JobResponse(BaseModel):
                 "user_id": "123e4567-e89b-12d3-a456-426614174001",
                 "content_type": "video",
                 "prompt": "A beautiful sunset over mountains",
-                "model_name": "moneyprinter-turbo",
-                "parameters": {"duration": 5, "resolution": "1080p"},
+                "model_name": "wan-2.2-api",
+                "parameters": {"duration": 5, "aspect_ratio": "16:9"},
                 "status": "processing",
                 "priority": 5,
                 "progress": 45.5,

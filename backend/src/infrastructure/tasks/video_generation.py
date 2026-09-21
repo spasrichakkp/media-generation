@@ -26,7 +26,8 @@ class VideoGenerationTask(Task):
     Provides automatic retry logic and error handling.
     """
 
-    autoretry_for = (Exception,)
+    # A timed-out paid request may still complete remotely. Never resubmit blindly.
+    autoretry_for = ()
     retry_kwargs = {
         "max_retries": settings.task_max_retries,
         "countdown": settings.task_retry_delay,
@@ -126,7 +127,7 @@ async def get_job_details(job_id: UUID) -> GenerationJob | None:
 
 async def generate_video_async(job: GenerationJob) -> str:
     """
-    Generate video asynchronously using MoviePyVideoGenerator.
+    Generate video using the job's explicit model.
 
     Args:
         job: GenerationJob entity with job details
@@ -145,14 +146,7 @@ async def generate_video_async(job: GenerationJob) -> str:
 
     # Import here to avoid circular imports
     from ..adapters.storage import S3Storage
-    from ..services import MoviePyVideoGenerator
-    from ..services.huggingface_video_generator import HuggingFaceVideoGenerator
-
-    # Initialize services based on video provider
-    if settings.video_provider == "huggingface":
-        video_generator = HuggingFaceVideoGenerator(settings, storage_adapter)
-    else:
-        video_generator = MoviePyVideoGenerator(settings, storage_adapter)
+    from ..services.video_generator_factory import create_video_generator
 
     storage_adapter = S3Storage(
         access_key_id=settings.s3_access_key_id,
@@ -161,7 +155,10 @@ async def generate_video_async(job: GenerationJob) -> str:
         region=settings.s3_region,
         endpoint_url=settings.s3_endpoint_url,
         use_ssl=settings.use_ssl,
+        public_endpoint_url=settings.s3_public_endpoint_url,
     )
+
+    video_generator = create_video_generator(settings, storage_adapter, job.model_name)
 
     audio_path = None
     video_path = None
@@ -182,11 +179,14 @@ async def generate_video_async(job: GenerationJob) -> str:
 
         # Step 2: Generate voiceover (30% -> 50%)
         logger.info("Step 2: Generating voiceover...")
-        audio_path = await video_generator.generate_voiceover(
-            script=script,
-            voice=None,  # Use default from settings
-            progress_callback=None,
-        )
+        # Diffusion prompts describe visuals, not words to read aloud.
+        narration = job.parameters.get("narration")
+        if job.model_name == "moneyprinter-turbo":
+            narration = script
+        if narration:
+            audio_path = await video_generator.generate_voiceover(
+                script=narration, voice=None, progress_callback=None,
+            )
         await update_job_status(job.id, JobStatus.PROCESSING, progress=50)
         logger.info(f"Voiceover generated: {audio_path}")
 
@@ -212,7 +212,7 @@ async def generate_video_async(job: GenerationJob) -> str:
         logger.info(f"Video uploaded: {video_url}")
 
         # Clean up temporary files
-        await video_generator.cleanup_temp_files(audio_path, video_path)
+        await video_generator.cleanup_temp_files(*(p for p in (audio_path, video_path) if p))
 
         logger.info(f"Video generation completed successfully: {video_url}")
         return video_url
@@ -271,7 +271,11 @@ def generate_video_task(self, job_id: str) -> dict:
 
     try:
         # Run async code in event loop
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
         # Fetch job details
         job = loop.run_until_complete(get_job_details(job_uuid))

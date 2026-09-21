@@ -98,7 +98,7 @@ class User:
             return True
         
         # Check if quota needs reset
-        if self.quota_reset_at and datetime.utcnow() >= self.quota_reset_at:
+        if self.quota_reset_at and datetime.now(tz=self.quota_reset_at.tzinfo) >= self.quota_reset_at:
             self.reset_quota()
         
         # Check quota

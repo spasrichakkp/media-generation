@@ -42,3 +42,19 @@ __pycache__/
 dist/
 build/
 egg-info/
+
+# Local agent instructions and project reports
+AGENTS.md
+.github/copilot-instructions.md
+PHASE_*.md
+PROJECT_STATUS_REPORT.md
+RAG_SYSTEM_ANALYSIS.md
+SITUATION_REPORT.md
+
+# Local evaluation artifacts and personal exports
+artifacts/
+Sahil Pasricha.html
+
+# Internal RAG implementation notes
+rag-system/IMPLEMENTATION_SUMMARY.md
+rag-system/MCP_INTEGRATION.md

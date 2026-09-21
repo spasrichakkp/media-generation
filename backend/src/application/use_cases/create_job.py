@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable, Awaitable
 from uuid import UUID
 
 from pydantic_settings import BaseSettings
@@ -56,6 +56,7 @@ class CreateGenerationJobUseCase:
         self,
         job_repository: JobRepository,
         user_repository: UserRepository,
+        commit: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         """
         Initialize the use case with repository dependencies.
@@ -66,6 +67,7 @@ class CreateGenerationJobUseCase:
         """
         self.job_repository = job_repository
         self.user_repository = user_repository
+        self.commit = commit
     
     async def execute(
         self,
@@ -116,11 +118,24 @@ class CreateGenerationJobUseCase:
         except ValueError:
             raise ValidationError(f"Invalid content type: {request.content_type}")
         
+        model_name = request.model_name
+        if content_type == ContentType.VIDEO:
+            from ...infrastructure.services.video_generator_factory import default_video_model
+            from ...infrastructure.services.huggingface_video_generator import HuggingFaceVideoGenerator
+            model_name = model_name or default_video_model(get_settings())
+            if model_name not in {"wan-2.2-api", "wan-2.2-local", "moneyprinter-turbo"}:
+                raise ValidationError("Unsupported video model; use wan-2.2-api or wan-2.2-local")
+            if model_name != "moneyprinter-turbo":
+                try:
+                    HuggingFaceVideoGenerator.validate_parameters(request.parameters, model_name == "wan-2.2-api")
+                except ValueError as exc:
+                    raise ValidationError(str(exc)) from exc
+
         job = GenerationJob(
             user_id=user_id,
             content_type=content_type,
             prompt=request.prompt,
-            model_name=request.model_name,
+            model_name=model_name,
             parameters=request.parameters,
             priority=request.priority,
             webhook_url=request.webhook_url,
@@ -154,6 +169,10 @@ class CreateGenerationJobUseCase:
             logger.error(f"Failed to update user quota: {e}")
             # Note: Job is already created, but quota not updated
             # This is acceptable - quota will be corrected on next reset
+
+        # Make the job visible to the worker before publishing it to the queue.
+        if self.commit is not None:
+            await self.commit()
 
         # 6. Enqueue Celery task for async video generation
         try:
