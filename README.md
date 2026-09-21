@@ -866,3 +866,19 @@ MIT License - See LICENSE file for details.
 
 The default video path now uses Wan 2.2 A14B through Hugging Face instead of colored text
 slides. See [video setup, supported parameters, local CUDA option, and evaluation](backend/VIDEO_GENERATION.md).
+
+## Generated video demos
+
+These examples were generated through the default Wan 2.2 video pipeline.
+
+### Fox in a sunlit forest
+
+![Wan 2.2 fox in a forest](assets/video-demos/wan22-fox-forest.jpg)
+
+[Download the generated MP4](assets/video-demos/wan22-fox-forest.mp4)
+
+### Ocean waves at sunset
+
+![Wan 2.2 ocean waves at sunset](assets/video-demos/wan22-ocean-waves-portrait.jpg)
+
+[Download the generated MP4](assets/video-demos/wan22-ocean-waves-portrait.mp4)
